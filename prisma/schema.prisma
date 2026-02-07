@@ -1,0 +1,138 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Property {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  address     String?
+  email       String?
+  phone       String?
+  externalId  String?  @unique // Beds24 Property ID
+  beds24InviteCode String? // For re-authentication
+  beds24RefreshToken String? // For API v2
+  bookingComId String? @unique // Booking.com Bhid
+  airbnbId     String? @unique
+  media        Media[]
+  rooms        Room[]
+}
+
+model Media {
+  id          String   @id @default(cuid())
+  url         String
+  alt         String?
+  type        String   @default("IMAGE") // IMAGE, VIDEO
+  propertyId  String?
+  property    Property? @relation(fields: [propertyId], references: [id])
+  roomId      String?
+  room        Room?     @relation(fields: [roomId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model ChannelSettings {
+  id          String   @id @default(cuid())
+  channel     String   // "AIRBNB", "BOOKING.COM", "EXPEDIA"
+  multiplier  Float    @default(1.15) // e.g. 1.15 for 15% markup
+  discount    Float    @default(0.0)
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id])
+  @@unique([channel, roomId])
+}
+
+model Room {
+  id          String   @id @default(cuid())
+  number      String?
+  name        String?
+  description String?
+  basePrice   Float    @default(0)
+  capacity    Int      @default(2)
+  maxAdults   Int      @default(2)
+  maxChildren Int      @default(0)
+  minNights   Int      @default(1)
+  size        Float?
+  bedConfig   String?
+  amenities   String?
+  
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id])
+  
+  externalId  String?  @unique // Beds24 Room/Unit ID
+  bookingComRoomId String? @unique
+  airbnbRoomId     String? @unique
+  
+  bookings    Booking[]
+  icalSyncs   IcalSync[]
+  priceRules  PriceRule[]
+  channelSettings ChannelSettings[]
+  media       Media[]
+}
+
+model Guest {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?  @unique
+  phone       String?
+  address     String?
+  city        String?
+  zipCode     String?
+  country     String?
+  language    String?  @default("pl")
+  notes       String?
+  marketingOptIn Boolean @default(false)
+  bookings    Booking[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id])
+  guestId     String?
+  guest       Guest?   @relation(fields: [guestId], references: [id])
+  guestName   String   // Snapshot of name at booking
+  guestEmail  String?  // Snapshot of email
+  numAdults   Int      @default(2)
+  numChildren Int      @default(0)
+  guestAges   String?  // JSON array: [35, 33, 7, 4] - ages of all guests
+  checkIn     DateTime
+  checkOut    DateTime
+  arrivalTime String?
+  totalPrice  Float
+  status      String   // "CONFIRMED", "CANCELLED", "NEW", "REQUEST", "BLOCKED"
+  source      String   // "DIRECT", "AIRBNB", "BOOKING.COM", "BEDS24"
+  externalId  String?  @unique
+  notes       String?  // Special requests/comments
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PriceRule {
+  id          String   @id @default(cuid())
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id])
+  date        DateTime
+  price       Float
+  minStay     Int?     @default(1)
+  isAvailable Boolean  @default(true)
+
+  @@unique([roomId, date])
+}
+
+model IcalSync {
+  id          String   @id @default(cuid())
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id])
+  channel     String   // "AIRBNB", "BOOKING.COM"
+  url         String   // The external iCal URL to import from
+  lastSynced  DateTime?
+}
