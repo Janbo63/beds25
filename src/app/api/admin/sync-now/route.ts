@@ -8,14 +8,15 @@ export async function POST() {
     try {
         const syncs = await prisma.icalSync.findMany();
 
-        const results = await Promise.allSettled(
-            syncs.map((sync: { id: string }) => importExternalIcal(sync.id))
-        );
+        const safeResults = results.map(result => ({
+            status: result.status,
+            value: result.status === 'fulfilled' ? result.value : result.reason?.message || 'Unknown error'
+        }));
 
         return NextResponse.json({
             message: 'Sync completed',
             count: syncs.length,
-            details: results
+            details: safeResults
         });
     } catch (error) {
         console.error('Manual Sync Error:', error);
