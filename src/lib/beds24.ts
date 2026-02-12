@@ -246,3 +246,46 @@ export async function updateBeds24Rates(roomId: string, date: string, price: num
 
     return response.json();
 }
+
+export async function updateBeds24RatesBatch(roomId: string, updates: { date: string, price: number }[]) {
+    const room = await prisma.room.findUnique({
+        where: { id: roomId }
+    });
+
+    const property = await prisma.property.findFirst({
+        where: { rooms: { some: { id: roomId } } }
+    });
+
+    if (!room || !property?.beds24InviteCode || !room.externalId) {
+        throw new Error('Room or Property not associated with Beds24');
+    }
+
+    const auth = await getBeds24Token(property.beds24InviteCode);
+    const accessToken = auth.token;
+
+    // Beds24 API v2 /inventory/rooms/calendar accepts an array of updates
+    const payload = updates.map(u => ({
+        roomId: parseInt(room.externalId!), // Verified existence above
+        startDate: u.date,
+        endDate: u.date,
+        price1: u.price
+    }));
+
+    // Send in chunks of 50 to avoid payload limits if necessary, though API v2 is robust
+    // For now, we'll send all at once assuming reasonable range (e.g. 1 month = 30 items)
+    const response = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar`, {
+        method: 'POST',
+        headers: {
+            'token': accessToken,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Failed to push batch rates to Beds24: ${err}`);
+    }
+
+    return response.json();
+}

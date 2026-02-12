@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { format, addDays, isSameDay, parseISO } from 'date-fns';
 import BookingModal from './BookingModal';
+import MassRateUpdateModal from './MassRateUpdateModal';
 
 interface TapeChartProps {
     onCellClick?: (data: { roomNumber: string; roomId: string; checkIn: string }) => void;
@@ -12,6 +13,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [selectedBooking, setSelectedBooking] = useState<any>(null);
+    const [massUpdateRoom, setMassUpdateRoom] = useState<{ id: string, number: string } | null>(null);
     const [editingCell, setEditingCell] = useState<{ roomId: string, date: string } | null>(null);
     const [tempPrice, setTempPrice] = useState<string>('');
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -139,7 +141,10 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                     <tbody className="divide-y divide-white/5">
                         {data.rooms.map((room: any) => (
                             <tr key={room.id} className="group hover:bg-white/[0.01] transition-all">
-                                <td className="p-8 border-r border-white/5 sticky left-0 bg-neutral-900/98 z-30 font-bold whitespace-nowrap shadow-2xl transition-colors group-hover:bg-neutral-800">
+                                <td
+                                    className="p-8 border-r border-white/5 sticky left-0 bg-neutral-900/98 z-30 font-bold whitespace-nowrap shadow-2xl transition-colors group-hover:bg-neutral-800 cursor-pointer hover:text-hotel-gold"
+                                    onClick={() => setMassUpdateRoom({ id: room.id, number: room.number })}
+                                >
                                     <div className="flex items-center gap-4">
                                         <div className="w-2.5 h-2.5 rounded-full bg-hotel-gold shadow-[0_0_10px_rgba(166,138,93,0.3)] group-hover:scale-125 transition-transform"></div>
                                         <div className="flex flex-col text-left">
@@ -298,6 +303,23 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                 <BookingModal
                     booking={selectedBooking}
                     onClose={() => setSelectedBooking(null)}
+                />
+            )}
+
+            {massUpdateRoom && (
+                <MassRateUpdateModal
+                    roomId={massUpdateRoom.id}
+                    roomNumber={massUpdateRoom.number}
+                    onClose={() => setMassUpdateRoom(null)}
+                    onSave={() => {
+                        setLoading(true);
+                        fetch('/api/dashboard/tape-chart')
+                            .then(res => res.json())
+                            .then(d => {
+                                setData(d);
+                                setLoading(false);
+                            });
+                    }}
                 />
             )}
         </>
