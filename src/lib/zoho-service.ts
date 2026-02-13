@@ -258,9 +258,14 @@ export const roomService = {
      */
     async delete(id: string) {
         // 1. Delete from Zoho CRM
-        await zohoClient.deleteRecord(ZOHO_MODULES.ROOMS, id);
+        try {
+            await zohoClient.deleteRecord(ZOHO_MODULES.ROOMS, id);
+        } catch (zohoError: any) {
+            console.warn(`Zoho delete warning for Room ${id}:`, zohoError.message);
+            // Continue to delete locally even if Zoho fails (e.g. already deleted)
+        }
 
-        // 2. Delete from local database
+        // 2. Delete from local database (Cascading)
         await prisma.room.delete({
             where: { id }
         });
