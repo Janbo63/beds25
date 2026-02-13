@@ -9,6 +9,11 @@ jobs:
   test:
     name: 🧪 Run Regression Tests
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "file:./ci.db"
+      ZOHO_CLIENT_ID: "dummy"
+      ZOHO_CLIENT_SECRET: "dummy"
+      ZOHO_REFRESH_TOKEN: "dummy"
     steps:
       - uses: actions/checkout@v4
       
@@ -17,6 +22,22 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+
+      - name: Create .env file
+        run: |
+          echo "DATABASE_URL=file:./ci.db" >> .env
+          echo "ZOHO_CLIENT_ID=dummy" >> .env
+          echo "ZOHO_CLIENT_SECRET=dummy" >> .env
+          echo "ZOHO_REFRESH_TOKEN=dummy" >> .env
+
+      - name: Debug Environment
+        run: |
+          echo "Files in directory:"
+          ls -R
+          echo "Content of .env:"
+          cat .env
+          echo "DATABASE_URL from env:"
+          echo $DATABASE_URL
           
       - name: Install dependencies
         run: npm install --legacy-peer-deps
@@ -26,8 +47,6 @@ jobs:
         
       - name: Build application
         run: npm run build
-        env:
-          DATABASE_URL: "file:./ci.db" # Local SQLite for CI testing
           
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
