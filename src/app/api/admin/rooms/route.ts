@@ -89,37 +89,38 @@ export async function PATCH(request: NextRequest) {
     }
 }
 
-const { searchParams } = new URL(request.url);
-const id = searchParams.get('id');
+export async function DELETE(request: NextRequest) {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
 
-if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
+    if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
 
-try {
-    // Standard Guard Rail: Check for FUTURE bookings
-    const futureBookingsCount = await prisma.booking.count({
-        where: {
-            roomId: id,
-            checkOut: {
-                gte: new Date() // Check-out is in the future
-            },
-            status: {
-                not: 'CANCELLED' // Ignore cancelled bookings
+    try {
+        // Standard Guard Rail: Check for FUTURE bookings
+        const futureBookingsCount = await prisma.booking.count({
+            where: {
+                roomId: id,
+                checkOut: {
+                    gte: new Date() // Check-out is in the future
+                },
+                status: {
+                    not: 'CANCELLED' // Ignore cancelled bookings
+                }
             }
+        });
+
+        if (futureBookingsCount > 0) {
+            return NextResponse.json({
+                error: `Cannot delete room. There are ${futureBookingsCount} active future bookings. Please cancel or move them first.`
+            }, { status: 400 });
         }
-    });
 
-    if (futureBookingsCount > 0) {
-        return NextResponse.json({
-            error: `Cannot delete room. There are ${futureBookingsCount} active future bookings. Please cancel or move them first.`
-        }, { status: 400 });
+        // Delete room via Zoho CRM service (deletes from Zoho first, then local DB)
+        // Local DB deletion will cascade to PriceRules, ChannelSettings, Media, IcalSyncs, and PAST Bookings (due to schema change)
+        await roomService.delete(id);
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error('Delete Room Error:', error);
+        return NextResponse.json({ error: error.message || 'Failed to delete room' }, { status: 500 });
     }
-
-    // Delete room via Zoho CRM service (deletes from Zoho first, then local DB)
-    // Local DB deletion will cascade to PriceRules, ChannelSettings, Media, IcalSyncs, and PAST Bookings (due to schema change)
-    await roomService.delete(id);
-    return NextResponse.json({ success: true });
-} catch (error: any) {
-    console.error('Delete Room Error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to delete room' }, { status: 500 });
-}
 }
