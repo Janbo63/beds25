@@ -34,7 +34,7 @@ model Media {
   propertyId  String?
   property    Property? @relation(fields: [propertyId], references: [id])
   roomId      String?
-  room        Room?     @relation(fields: [roomId], references: [id])
+  room        Room?     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
 }
 
@@ -44,7 +44,7 @@ model ChannelSettings {
   multiplier  Float    @default(1.15) // e.g. 1.15 for 15% markup
   discount    Float    @default(0.0)
   roomId      String
-  room        Room     @relation(fields: [roomId], references: [id])
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   @@unique([channel, roomId])
 }
 
@@ -96,7 +96,7 @@ model Guest {
 model Booking {
   id          String   @id @default(cuid())
   roomId      String
-  room        Room     @relation(fields: [roomId], references: [id])
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   guestId     String?
   guest       Guest?   @relation(fields: [guestId], references: [id])
   guestName   String   // Snapshot of name at booking
@@ -119,7 +119,7 @@ model Booking {
 model PriceRule {
   id          String   @id @default(cuid())
   roomId      String
-  room        Room     @relation(fields: [roomId], references: [id])
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   date        DateTime
   price       Float
   minStay     Int?     @default(1)
@@ -131,7 +131,7 @@ model PriceRule {
 model IcalSync {
   id          String   @id @default(cuid())
   roomId      String
-  room        Room     @relation(fields: [roomId], references: [id])
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   channel     String   // "AIRBNB", "BOOKING.COM"
   url         String   // The external iCal URL to import from
   lastSynced  DateTime?
