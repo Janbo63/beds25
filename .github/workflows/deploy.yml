@@ -9,6 +9,11 @@ jobs:
   test:
     name: 🧪 Run Regression Tests
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "file:./ci.db"
+      ZOHO_CLIENT_ID: "dummy"
+      ZOHO_CLIENT_SECRET: "dummy"
+      ZOHO_REFRESH_TOKEN: "dummy"
     steps:
       - uses: actions/checkout@v4
       
@@ -26,8 +31,6 @@ jobs:
         
       - name: Build application
         run: npm run build
-        env:
-          DATABASE_URL: "file:./ci.db" # Local SQLite for CI testing
           
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
