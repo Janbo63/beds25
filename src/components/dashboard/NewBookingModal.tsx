@@ -35,10 +35,15 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
 
     useEffect(() => {
         if (isOpen) {
+            // Reset state on open
+            setError(null);
+            setLoading(false);
+
             fetch('/api/admin/rooms')
                 .then(res => res.json())
                 .then(data => {
                     setRooms(data);
+
                     if (initialData) {
                         const checkInStr = initialData.checkIn || '';
                         let checkOutStr = '';
@@ -50,13 +55,11 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             }
                         }
 
-                        setFormData(prev => ({
-                            ...prev,
+                        setFormData({
                             roomNumber: initialData.roomNumber || '',
                             roomId: initialData.roomId || '',
                             checkIn: checkInStr,
                             checkOut: checkOutStr,
-                            // Reset other fields
                             guestName: '',
                             guestEmail: '',
                             numAdults: 2,
@@ -65,7 +68,23 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             totalPrice: '',
                             notes: '',
                             status: 'CONFIRMED'
-                        }));
+                        });
+                    } else {
+                        // Reset for manual entry
+                        setFormData({
+                            roomNumber: '',
+                            roomId: '',
+                            guestName: '',
+                            guestEmail: '',
+                            numAdults: 2,
+                            numChildren: 0,
+                            guestAges: [],
+                            checkIn: '',
+                            checkOut: '',
+                            totalPrice: '',
+                            notes: '',
+                            status: 'CONFIRMED'
+                        });
                     }
                 });
         }
