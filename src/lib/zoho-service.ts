@@ -114,7 +114,7 @@ function mapZohoToBooking(zohoRecord: ZohoRecord): any {
 /**
  * Map Room data to Zoho format
  */
-function mapRoomToZoho(room: any): ZohoRecord {
+export function mapRoomToZoho(room: any): ZohoRecord {
     return {
         Name: `${room.number} - ${room.name}`,
         Room_Name: room.name,
@@ -324,6 +324,8 @@ export const roomService = {
             fields: ['id', 'Name', 'Room_Name', 'Base_Price', 'Capacity', 'Max_Adults', 'Max_Children', 'Min_Nights']
         });
 
+        console.log(`[ZohoService] Syncing Rooms. Found ${response.data.length} records.`);
+
         for (const zohoRecord of response.data) {
             const roomData = mapZohoToRoom(zohoRecord);
 
@@ -334,6 +336,6 @@ export const roomService = {
             });
         }
 
-        return response.data.length;
+        return response;
     }
 };
