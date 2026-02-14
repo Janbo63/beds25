@@ -10,6 +10,7 @@
 
 import zohoClient, { ZohoRecord } from './zoho';
 import prisma from './prisma';
+import { format } from 'date-fns';
 
 /**
  * Zoho Module Names - matching your CRM setup
@@ -68,8 +69,8 @@ async function findOrCreateContact(guestName: string, guestEmail: string): Promi
 function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string): ZohoRecord {
     const record: ZohoRecord = {
         Name: `${booking.guestName} - ${booking.roomNumber || 'Room'}`,
-        Check_In: booking.checkIn,
-        Check_Out: booking.checkOut,
+        Check_In: format(new Date(booking.checkIn), 'yyyy-MM-dd'),
+        Check_Out: format(new Date(booking.checkOut), 'yyyy-MM-dd'),
         Total_Price: booking.totalPrice,
         Number_of_Adults: booking.numAdults,
         Number_of_Children: booking.numChildren,
