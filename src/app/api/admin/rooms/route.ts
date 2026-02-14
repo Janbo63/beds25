@@ -12,10 +12,23 @@ export async function POST(request: NextRequest) {
 
     try {
         // Get first property if none provided
+        // Get first property if none provided
         let actualPropertyId = propertyId;
         if (!actualPropertyId) {
             const prop = await prisma.property.findFirst();
-            actualPropertyId = prop?.id;
+            if (prop) {
+                actualPropertyId = prop.id;
+            } else {
+                // If NO properties exist (e.g. fresh CI db), create a default one
+                const newProp = await prisma.property.create({
+                    data: {
+                        name: 'Default Property',
+                        address: '123 Main St',
+                        email: 'admin@example.com'
+                    }
+                });
+                actualPropertyId = newProp.id;
+            }
         }
 
         // Create room via Zoho CRM service (writes to Zoho first, then local DB)
