@@ -23,8 +23,14 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Create .env file
+      - name: Set Environment Variables
         run: |
+          echo "DATABASE_URL=file:./ci.db" >> $GITHUB_ENV
+          echo "ZOHO_CLIENT_ID=dummy" >> $GITHUB_ENV
+          echo "ZOHO_CLIENT_SECRET=dummy" >> $GITHUB_ENV
+          echo "ZOHO_REFRESH_TOKEN=dummy" >> $GITHUB_ENV
+          
+          # Also create .env file for tools that specifically look for it
           echo "DATABASE_URL=file:./ci.db" >> .env
           echo "ZOHO_CLIENT_ID=dummy" >> .env
           echo "ZOHO_CLIENT_SECRET=dummy" >> .env
@@ -44,6 +50,9 @@ jobs:
         
       - name: Generate Prisma client
         run: npx prisma generate
+        
+      - name: Push Database Schema
+        run: npx prisma db push
         
       - name: Build application
         run: npm run build
