@@ -166,9 +166,12 @@ export const bookingService = {
         }
 
         // 4. Sync to local database
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { roomNumber, ...bookingDataForDb } = bookingData;
+
         const localBooking = await prisma.booking.create({
             data: {
-                ...bookingData,
+                ...bookingDataForDb,
                 id: zohoRecord.id,
                 status: bookingData.status || 'CONFIRMED',
             }
