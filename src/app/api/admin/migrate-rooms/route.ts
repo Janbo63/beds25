@@ -108,6 +108,13 @@ export async function POST(request: NextRequest) {
             await prisma.$transaction(async (tx) => {
                 // 1. Transfer externalId from old to new (critical for Beds24 sync!)
                 if (oldRoom.externalId && !newRoom.externalId) {
+                    // Clear externalId from old room FIRST (unique constraint!)
+                    await tx.room.update({
+                        where: { id: oldRoom.id },
+                        data: { externalId: null }
+                    });
+
+                    // Now set it on the new room
                     await tx.room.update({
                         where: { id: newRoom.id },
                         data: {
@@ -116,12 +123,6 @@ export async function POST(request: NextRequest) {
                             name: oldRoom.name,
                             number: oldRoom.number,
                         }
-                    });
-
-                    // Clear externalId from old room first (unique constraint)
-                    await tx.room.update({
-                        where: { id: oldRoom.id },
-                        data: { externalId: null }
                     });
                 }
 
