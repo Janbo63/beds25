@@ -177,13 +177,13 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                     // Compute booking block inline styles for seamless pill shape
                                     const bookingStyle: React.CSSProperties = booking ? {
                                         position: 'absolute',
-                                        top: '8px',
-                                        bottom: '8px',
-                                        left: isSingleDay ? '4px' : isFirstDay ? '4px' : '-1px',
-                                        right: isSingleDay ? '4px' : isLastDay ? '4px' : '-1px',
-                                        borderRadius: isSingleDay ? '14px' :
-                                            isFirstDay ? '14px 0 0 14px' :
-                                                isLastDay ? '0 14px 14px 0' : '0',
+                                        top: '6px',
+                                        bottom: '6px',
+                                        left: isSingleDay ? '3px' : isFirstDay ? '3px' : '-1px',
+                                        right: isSingleDay ? '3px' : isLastDay ? '3px' : '-1px',
+                                        borderRadius: isSingleDay ? '9999px' :
+                                            isFirstDay ? '9999px 0 0 9999px' :
+                                                isLastDay ? '0 9999px 9999px 0' : '0',
                                         zIndex: 10,
                                     } : {};
 
