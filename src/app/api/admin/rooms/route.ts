@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json(room);
     } catch (error: any) {
-        console.error('Room creation error:', error);
+        // [DEBUG] Explicitly logging error for GitHub Actions
+        console.error('SERVER ERROR - Room creation failed:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
         return NextResponse.json({ error: error.message || 'Failed to create room' }, { status: 500 });
     }
 }
