@@ -187,7 +187,9 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                 onClose();
             } else {
                 const data = await res.json();
-                setError(data.error || 'Failed to create booking');
+                const errorMessage = data.error || 'Failed to create booking';
+                const details = data.details ? ` (${JSON.stringify(data.details)})` : '';
+                setError(`${errorMessage}${details}`);
             }
         } catch (error) {
             console.error('Booking failed', error);
