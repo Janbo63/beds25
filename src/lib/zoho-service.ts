@@ -169,6 +169,7 @@ export const bookingService = {
         const localBooking = await prisma.booking.create({
             data: {
                 id: zohoRecord.id,
+                status: bookingData.status || 'CONFIRMED',
                 ...bookingData,
             }
         });
