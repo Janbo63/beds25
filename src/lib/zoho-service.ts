@@ -26,6 +26,11 @@ export const ZOHO_MODULES = {
  */
 async function findOrCreateContact(guestName: string, guestEmail: string): Promise<string> {
     try {
+        if (process.env.ZOHO_CLIENT_ID === 'dummy') {
+            console.log('Skipping Zoho Contact Search (CI Mode)');
+            return `mock-contact-id-${Date.now()}`;
+        }
+
         // Search for existing contact by email with all required fields
         const searchQuery = `select id, Email, First_Name, Last_Name from Contacts where Email = '${guestEmail}'`;
         const searchResult = await zohoClient.searchRecords(searchQuery);
@@ -43,6 +48,11 @@ async function findOrCreateContact(guestName: string, guestEmail: string): Promi
             Last_Name: lastName,
             Email: guestEmail,
         };
+
+        if (process.env.ZOHO_CLIENT_ID === 'dummy') {
+            console.log('Skipping Zoho Contact Search/Create (CI Mode)');
+            return `mock-contact-id-${Date.now()}`;
+        }
 
         const newContact = await zohoClient.createRecord('Contacts', contactData);
         return newContact.id!;
@@ -145,9 +155,15 @@ export const bookingService = {
         // 2. Get the room's Zoho CRM ID (we use roomId which is already the Zoho ID)
         const roomZohoId = bookingData.roomId;
 
-        // 3. Create booking in Zoho CRM with contact and room lookups
-        const zohoData = mapBookingToZoho(bookingData, contactId, roomZohoId);
-        const zohoRecord = await zohoClient.createRecord(ZOHO_MODULES.BOOKINGS, zohoData);
+        // 3. Create booking in Zoho CRM (Skip if in CI)
+        let zohoRecord: any;
+        if (process.env.ZOHO_CLIENT_ID === 'dummy') {
+            console.log('Skipping Zoho Booking Create (CI Mode)');
+            zohoRecord = { id: `mock-booking-id-${Date.now()}` };
+        } else {
+            const zohoData = mapBookingToZoho(bookingData, contactId, roomZohoId);
+            zohoRecord = await zohoClient.createRecord(ZOHO_MODULES.BOOKINGS, zohoData);
+        }
 
         // 4. Sync to local database
         const localBooking = await prisma.booking.create({
@@ -181,8 +197,10 @@ export const bookingService = {
      * Delete a booking from Zoho CRM and local DB
      */
     async delete(id: string) {
-        // 1. Delete from Zoho CRM
-        await zohoClient.deleteRecord(ZOHO_MODULES.BOOKINGS, id);
+        // 1. Delete from Zoho CRM (Skip if in CI)
+        if (process.env.ZOHO_CLIENT_ID !== 'dummy') {
+            await zohoClient.deleteRecord(ZOHO_MODULES.BOOKINGS, id);
+        }
 
         // 2. Delete from local database
         await prisma.booking.delete({

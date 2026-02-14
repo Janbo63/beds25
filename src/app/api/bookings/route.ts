@@ -94,3 +94,18 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 });
     }
 }
+
+export async function DELETE(request: NextRequest) {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
+
+    try {
+        await bookingService.delete(id);
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error('Delete Booking Error:', error);
+        return NextResponse.json({ error: error.message || 'Failed to delete booking' }, { status: 500 });
+    }
+}
