@@ -25,13 +25,13 @@ jobs:
 
       - name: Set Environment Variables
         run: |
-          echo "DATABASE_URL=file:./ci.db" >> $GITHUB_ENV
+          echo "DATABASE_URL=file:${{ github.workspace }}/ci.db" >> $GITHUB_ENV
           echo "ZOHO_CLIENT_ID=dummy" >> $GITHUB_ENV
           echo "ZOHO_CLIENT_SECRET=dummy" >> $GITHUB_ENV
           echo "ZOHO_REFRESH_TOKEN=dummy" >> $GITHUB_ENV
           
           # Also create .env file for tools that specifically look for it
-          echo "DATABASE_URL=file:./ci.db" >> .env
+          echo "DATABASE_URL=file:${{ github.workspace }}/ci.db" >> .env
           echo "ZOHO_CLIENT_ID=dummy" >> .env
           echo "ZOHO_CLIENT_SECRET=dummy" >> .env
           echo "ZOHO_REFRESH_TOKEN=dummy" >> .env
