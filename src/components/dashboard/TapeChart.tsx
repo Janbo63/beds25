@@ -267,14 +267,16 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                         e.stopPropagation();
                                                         setSelectedBooking(booking);
                                                     }}
-                                                    className={`absolute inset-y-4 flex flex-col items-center justify-center text-[10px] font-black uppercase px-4 shadow-xl cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all border-y border-white/10 z-10 overflow-hidden
-                                                    ${isFirstDay ? 'rounded-l-2xl ml-1 left-0 border-l border-y bg-clip-padding' : 'left-[-1px] border-y'} 
-                                                    ${isLastDay ? 'rounded-r-2xl mr-1 right-0 border-r border-y bg-clip-padding' : 'right-[-2px] border-y'} 
+                                                    className={`absolute inset-y-3 flex flex-col items-center justify-center text-[10px] font-black uppercase px-4 shadow-lg cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all z-10 overflow-hidden
+                                                    ${isFirstDay && isLastDay ? 'rounded-2xl mx-1 left-0 right-0 border' :
+                                                            isFirstDay ? 'rounded-l-2xl rounded-r-none ml-1 left-0 right-[-2px] border-l border-y' :
+                                                                isLastDay ? 'rounded-r-2xl rounded-l-none mr-1 right-0 left-[-2px] border-r border-y' :
+                                                                    'rounded-none left-[-2px] right-[-2px] border-y'}
                                                     ${booking.status === 'BLOCKED' ? 'bg-neutral-800 text-neutral-500 border-neutral-700' :
                                                             booking.status === 'CANCELLED' ? 'bg-rose-900/40 text-rose-400 border-rose-500/20' :
-                                                                booking.status === 'REQUEST' ? 'bg-amber-600 text-white' :
-                                                                    booking.source?.toUpperCase() === 'AIRBNB' ? 'bg-[#FF5A5F] text-white shadow-[#FF5A5F]/20' :
-                                                                        booking.source?.toUpperCase().includes('BOOKING') ? 'bg-[#003580] text-white shadow-[#003580]/20' : 'bg-alpaca-green text-white shadow-alpaca-green/30'
+                                                                booking.status === 'REQUEST' ? 'bg-amber-600 text-white border-amber-500/50' :
+                                                                    booking.source?.toUpperCase() === 'AIRBNB' ? 'bg-[#FF5A5F] text-white border-[#FF5A5F]/50 shadow-[#FF5A5F]/20' :
+                                                                        booking.source?.toUpperCase().includes('BOOKING') ? 'bg-[#003580] text-white border-[#003580]/50 shadow-[#003580]/20' : 'bg-alpaca-green text-white border-alpaca-green/50 shadow-alpaca-green/30'
                                                         }`}>
                                                     <div className="sticky left-0 right-0 flex flex-col items-center gap-1 w-full px-2">
                                                         <div className="flex items-center gap-1.5 opacity-90">
