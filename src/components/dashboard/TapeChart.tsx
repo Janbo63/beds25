@@ -155,20 +155,24 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                 </td>
                                 {data.days.map((day: string) => {
                                     const booking = room.bookings.find((b: any) => {
-                                        const d = parseISO(day);
-                                        const start = parseISO(b.checkIn);
-                                        const end = parseISO(b.checkOut);
-                                        return (d >= start && d < end);
+                                        const bCheckIn = typeof b.checkIn === 'string' ? b.checkIn.slice(0, 10) : format(new Date(b.checkIn), 'yyyy-MM-dd');
+                                        const bCheckOut = typeof b.checkOut === 'string' ? b.checkOut.slice(0, 10) : format(new Date(b.checkOut), 'yyyy-MM-dd');
+                                        return (day >= bCheckIn && day < bCheckOut);
                                     });
 
                                     const isToday = day === todayStr;
-                                    // Use string comparison to avoid time issues
-                                    const checkInStr = booking ? format(parseISO(booking.checkIn), 'yyyy-MM-dd') : '';
-                                    const checkOutStr = booking ? format(parseISO(booking.checkOut), 'yyyy-MM-dd') : '';
+
+                                    // Use simple string slicing to avoid timezone issues with parseISO/format
+                                    const checkInStr = booking ? (typeof booking.checkIn === 'string' ? booking.checkIn.slice(0, 10) : format(new Date(booking.checkIn), 'yyyy-MM-dd')) : '';
+                                    const checkOutStr = booking ? (typeof booking.checkOut === 'string' ? booking.checkOut.slice(0, 10) : format(new Date(booking.checkOut), 'yyyy-MM-dd')) : '';
+
+                                    // Compute the day AFTER the current cell
+                                    const nextDay = format(addDays(new Date(day + 'T12:00:00'), 1), 'yyyy-MM-dd');
 
                                     const isFirstDay = booking && day === checkInStr;
-                                    const isLastDay = booking && format(addDays(parseISO(day), 1), 'yyyy-MM-dd') === checkOutStr;
+                                    const isLastDay = booking && nextDay === checkOutStr;
                                     const isSingleDay = isFirstDay && isLastDay;
+
 
                                     // Get price for this date
                                     const roomPrice = room.prices?.[day]?.price || room.basePrice;
