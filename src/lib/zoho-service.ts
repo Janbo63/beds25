@@ -232,10 +232,14 @@ export const roomService = {
         }
 
         // 2. Sync to local database
+        const { propertyId, ...restRoomData } = roomData;
         const localRoom = await prisma.room.create({
             data: {
                 id: zohoRecord.id, // Use mock ID in CI
-                ...roomData,
+                ...restRoomData,
+                property: {
+                    connect: { id: propertyId }
+                }
             }
         });
 
