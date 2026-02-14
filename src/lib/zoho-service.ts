@@ -151,7 +151,9 @@ export const bookingService = {
      */
     async create(bookingData: any) {
         // 1. Find or create contact in Zoho CRM
+        console.log('[ZohoService] Finding/Creating contact for:', bookingData.guestEmail);
         const contactId = await findOrCreateContact(bookingData.guestName, bookingData.guestEmail);
+        console.log('[ZohoService] Contact ID:', contactId);
 
         // 2. Get the room's Zoho CRM ID (we use roomId which is already the Zoho ID)
         const roomZohoId = bookingData.roomId;
@@ -163,7 +165,14 @@ export const bookingService = {
             zohoRecord = { id: `mock-booking-id-${Date.now()}` };
         } else {
             const zohoData = mapBookingToZoho(bookingData, contactId, roomZohoId);
-            zohoRecord = await zohoClient.createRecord(ZOHO_MODULES.BOOKINGS, zohoData);
+            console.log('[ZohoService] Creating Booking in Zoho with data:', JSON.stringify(zohoData, null, 2));
+            try {
+                zohoRecord = await zohoClient.createRecord(ZOHO_MODULES.BOOKINGS, zohoData);
+                console.log('[ZohoService] Zoho Booking created:', zohoRecord.id);
+            } catch (error) {
+                console.error('[ZohoService] Failed to create Zoho record:', error);
+                throw error;
+            }
         }
 
         // 4. Sync to local database

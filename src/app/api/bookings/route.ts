@@ -12,12 +12,15 @@ export async function POST(request: NextRequest) {
             notes, status, source
         } = body;
 
+        console.log('[API] Creating booking:', { roomId, guestName, dates: { checkIn, checkOut } });
+
         // Fetch room to validate constraints
         const room = await prisma.room.findUnique({
             where: { id: roomId }
         });
 
         if (!room) {
+            console.error('[API] Room not found:', roomId);
             return NextResponse.json({ error: 'Room not found' }, { status: 404 });
         }
 
@@ -71,9 +74,10 @@ export async function POST(request: NextRequest) {
         });
 
         return NextResponse.json(booking);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Create Booking Error:', error);
-        return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 });
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        return NextResponse.json({ error: error.message || 'Failed to create booking', details: error }, { status: 500 });
     }
 }
 
