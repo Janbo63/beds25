@@ -70,7 +70,12 @@ export async function GET() {
                 channelSettings: true
             }
         });
-        return NextResponse.json(rooms);
+
+        // Filter out rooms that don't look like Zoho IDs (only numeric)
+        // This prevents the UI from selecting old/invalid rooms with CUIDs
+        const validRooms = rooms.filter(room => /^\d+$/.test(room.id));
+
+        return NextResponse.json(validRooms);
     } catch (error) {
         return NextResponse.json({ error: 'Failed to fetch rooms' }, { status: 500 });
     }
