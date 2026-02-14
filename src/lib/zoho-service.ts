@@ -326,12 +326,37 @@ export const roomService = {
 
         console.log(`[ZohoService] Syncing Rooms. Found ${response.data.length} records.`);
 
+        // Get default property for connection
+        const defaultProperty = await prisma.property.findFirst();
+        let propertyId = defaultProperty?.id;
+
+        if (!propertyId) {
+            console.log('[ZohoService] No property found. Creating default property.');
+            const newProp = await prisma.property.create({
+                data: {
+                    name: 'Main Property',
+                    description: 'Default Property created by Zoho Sync',
+                    email: process.env.ZOHO_CURRENT_USER_EMAIL || 'admin@example.com'
+                }
+            });
+            propertyId = newProp.id;
+        }
+
         for (const zohoRecord of response.data) {
             const roomData = mapZohoToRoom(zohoRecord);
 
+            // Separate data for create vs update
+            // Update: Just update fields
+            // Create: Needs Property connection
+
             await prisma.room.upsert({
                 where: { id: zohoRecord.id },
-                create: roomData,
+                create: {
+                    ...roomData,
+                    property: {
+                        connect: { id: propertyId }
+                    }
+                },
                 update: roomData
             });
         }
