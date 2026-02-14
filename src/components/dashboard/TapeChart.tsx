@@ -264,8 +264,8 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                         setSelectedBooking(booking);
                                                     }}
                                                     className={`absolute inset-y-4 flex flex-col items-center justify-center text-[10px] font-black uppercase px-4 shadow-xl cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all border-y border-white/10 z-10 overflow-hidden
-                                                    ${isFirstDay ? 'rounded-l-2xl border-l ml-2 left-0' : 'left-[-1px]'} 
-                                                    ${isLastDay ? 'rounded-r-2xl border-r mr-2 right-0' : 'right-[-2px]'} 
+                                                    ${isFirstDay ? 'rounded-l-xl ml-1 left-0 border-l border-y bg-clip-padding' : 'left-[-1px] border-y'} 
+                                                    ${isLastDay ? 'rounded-r-xl mr-1 right-0 border-r border-y bg-clip-padding' : 'right-[-2px] border-y'} 
                                                     ${booking.status === 'BLOCKED' ? 'bg-neutral-800 text-neutral-500 border-neutral-700' :
                                                             booking.status === 'CANCELLED' ? 'bg-rose-900/40 text-rose-400 border-rose-500/20' :
                                                                 booking.status === 'REQUEST' ? 'bg-amber-600 text-white' :
