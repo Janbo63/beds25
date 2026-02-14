@@ -163,8 +163,8 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
 
                                     const isToday = day === todayStr;
                                     // Use string comparison to avoid time issues
-                                    const checkInStr = format(parseISO(booking.checkIn), 'yyyy-MM-dd');
-                                    const checkOutStr = format(parseISO(booking.checkOut), 'yyyy-MM-dd');
+                                    const checkInStr = booking ? format(parseISO(booking.checkIn), 'yyyy-MM-dd') : '';
+                                    const checkOutStr = booking ? format(parseISO(booking.checkOut), 'yyyy-MM-dd') : '';
 
                                     const isFirstDay = booking && day === checkInStr;
                                     const isLastDay = booking && format(addDays(parseISO(day), 1), 'yyyy-MM-dd') === checkOutStr;
