@@ -19,7 +19,8 @@ export const ZOHO_MODULES = {
     BOOKINGS: 'Bookings',
     ROOMS: 'Rooms',
     PROPERTIES: 'Properties',
-    PRICE_RULES: 'Price_Rules',
+    BOOKING_ADMINS: 'Booking_Admins',
+    VOUCHER_CODES: 'Voucher_Codes',
 };
 
 /**
