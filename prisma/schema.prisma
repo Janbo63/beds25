@@ -17,11 +17,23 @@ model Property {
   address     String?
   email       String?
   phone       String?
+  latitude    Float?
+  longitude   Float?
+  starRating  Float?
+  propertyType String?  // "hotel", "apartment", "bnb", "guesthouse", "villa"
+  currency    String?  @default("EUR")
+  timezone    String?  @default("Europe/Warsaw")
+  checkInTime  String?  @default("15:00")
+  checkOutTime String?  @default("11:00")
+  defaultCancellationPolicy String? // "free", "flexible", "moderate", "strict"
+  facilities  String?  // JSON array of facility names
+  logoUrl     String?
   externalId  String?  @unique // Beds24 Property ID
   beds24InviteCode String? // For re-authentication
   beds24RefreshToken String? // For API v2
   bookingComId String? @unique // Booking.com Bhid
   airbnbId     String? @unique
+  zohoAdminId  String? @unique // Link to Zoho "Booking Admins" module
   media        Media[]
   rooms        Room[]
 }
@@ -61,6 +73,10 @@ model Room {
   size        Float?
   bedConfig   String?
   amenities   String?
+  roomType    String?  // "single", "double", "twin", "suite", "apartment", "dormitory"
+  smokingPolicy String? @default("non_smoking") // "smoking", "non_smoking", "both"
+  floor       String?
+  viewType    String?  // "sea", "mountain", "garden", "city", "pool"
   
   propertyId  String
   property    Property @relation(fields: [propertyId], references: [id])
@@ -79,12 +95,15 @@ model Room {
 model Guest {
   id          String   @id @default(cuid())
   name        String
+  firstName   String?
+  lastName    String?
   email       String?  @unique
   phone       String?
   address     String?
   city        String?
   zipCode     String?
   country     String?
+  nationality String?
   language    String?  @default("pl")
   notes       String?
   marketingOptIn Boolean @default(false)
@@ -112,6 +131,19 @@ model Booking {
   source      String   // "DIRECT", "AIRBNB", "BOOKING.COM", "BEDS24"
   externalId  String?  @unique
   notes       String?  // Special requests/comments
+  paymentMethod  String?  // "card", "wallet", "cash", "bank_transfer"
+  paymentTiming  String?  // "pay_online_now", "pay_online_later", "pay_at_property"
+  paymentStatus  String?  @default("pending") // "pending", "paid", "refunded", "failed"
+  bookingComOrderId      String? @unique
+  bookingComPincode      String?
+  bookingComReservation  String?
+  cancellationPolicy     String?
+  commissionAmount       Float?
+  commissionPercent      Float?
+  currency               String? @default("EUR")
+  voucherCode            String?  // Promo/voucher code used
+  discountAmount         Float?   // Actual discount applied
+  propertyId             String?  // Direct link to property
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -135,4 +167,36 @@ model IcalSync {
   channel     String   // "AIRBNB", "BOOKING.COM"
   url         String   // The external iCal URL to import from
   lastSynced  DateTime?
+}
+
+model VoucherCode {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  description     String?
+  discountType    String    // "percentage" | "fixed_amount"
+  discountValue   Float     // 25 (= 25%) or 50 (= €50)
+  currency        String?   @default("EUR")
+  minNights       Int?
+  minBookingValue Float?
+  maxUses         Int?
+  usedCount       Int       @default(0)
+  validFrom       DateTime?
+  validUntil      DateTime?
+  applicableTo    String?   // JSON: room/property IDs, null = all
+  source          String?   // "BOOKING.COM", "DIRECT", null = all
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  redemptions     VoucherRedemption[]
+}
+
+model VoucherRedemption {
+  id              String      @id @default(cuid())
+  voucherId       String
+  voucher         VoucherCode @relation(fields: [voucherId], references: [id])
+  bookingId       String
+  discountApplied Float
+  redeemedAt      DateTime    @default(now())
+
+  @@unique([voucherId, bookingId])
 }
