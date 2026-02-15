@@ -242,6 +242,44 @@ export const bookingService = {
         }
 
         return response.data.length;
+    },
+
+    /**
+     * Sync an existing local booking to Zoho CRM (e.g. after Beds24 import)
+     */
+    async syncToZoho(localBooking: any, room: any) {
+        if (process.env.ZOHO_CLIENT_ID === 'dummy') {
+            console.log('[ZohoService] Skipping syncToZoho (CI Mode)');
+            return;
+        }
+
+        console.log(`[ZohoService] Syncing booking ${localBooking.id} to Zoho...`);
+
+        // 1. Find or create contact in Zoho
+        let contactId: string | undefined;
+        if (localBooking.guestEmail) {
+            try {
+                contactId = await findOrCreateContact(localBooking.guestName, localBooking.guestEmail);
+            } catch (err) {
+                console.warn('[ZohoService] Could not find/create contact, proceeding without:', err);
+            }
+        }
+
+        // 2. Map booking to Zoho format
+        const zohoData = mapBookingToZoho({
+            ...localBooking,
+            roomNumber: room.number || room.name,
+        }, contactId, room.id);
+
+        // 3. Create record in Zoho
+        try {
+            const zohoRecord = await zohoClient.createRecord(ZOHO_MODULES.BOOKINGS, zohoData);
+            console.log(`[ZohoService] Booking synced to Zoho with ID: ${zohoRecord.id}`);
+            return zohoRecord;
+        } catch (error) {
+            console.error(`[ZohoService] Failed to sync booking to Zoho:`, error);
+            throw error;
+        }
     }
 };
 

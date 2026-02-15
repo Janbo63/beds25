@@ -1,4 +1,5 @@
 import prisma from './prisma';
+import { bookingService } from './zoho-service';
 
 const BEDS24_API_URL = 'https://beds24.com/api/v2';
 
@@ -150,6 +151,9 @@ export async function importBeds24Data(inviteCode: string) {
         }
     };
 
+    let zohoSynced = 0;
+    let zohoFailed = 0;
+
     for (const b of bookings) {
         // Map to a local room
         const localRoom = await prisma.room.findUnique({
@@ -177,7 +181,7 @@ export async function importBeds24Data(inviteCode: string) {
                 guestId = guest.id;
             }
 
-            await prisma.booking.upsert({
+            const localBooking = await prisma.booking.upsert({
                 where: { externalId: b.id?.toString() },
                 update: {
                     guestName: guestName,
@@ -203,10 +207,19 @@ export async function importBeds24Data(inviteCode: string) {
                     roomId: localRoom.id
                 }
             });
+
+            // Sync to Zoho CRM (non-blocking: don't fail the import if Zoho fails)
+            try {
+                await bookingService.syncToZoho(localBooking, localRoom);
+                zohoSynced++;
+            } catch (zohoErr) {
+                console.error(`[Beds24Import] Failed to sync booking ${localBooking.id} to Zoho:`, zohoErr);
+                zohoFailed++;
+            }
         }
     }
 
-    return results;
+    return { ...results, zohoSync: { synced: zohoSynced, failed: zohoFailed } };
 }
 
 export async function updateBeds24Rates(roomId: string, date: string, price: number) {
