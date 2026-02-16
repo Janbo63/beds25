@@ -266,6 +266,8 @@ export const bookingService = {
      * Sync all bookings from Zoho to local DB
      */
     async syncFromZoho() {
+        if (process.env.ZOHO_CLIENT_ID === 'dummy') return 0;
+
         const response = await zohoClient.getRecords(ZOHO_MODULES.BOOKINGS, {
             per_page: 200,
             fields: ['id', 'Guest', 'Room', 'Check_In', 'Check_Out', 'Total_Price', 'Number_of_Adults', 'Number_of_Children', 'Guest_Ages', 'Booking_Notes', 'Payment_Method', 'Payment_Timing', 'Status', 'BookingCom_Order_ID', 'Voucher_Code']
@@ -331,6 +333,8 @@ export const roomService = {
      * Sync from Zoho to local DB
      */
     async syncFromZohoToLocal() {
+        if (process.env.ZOHO_CLIENT_ID === 'dummy') return;
+
         const response = await zohoClient.getRecords(ZOHO_MODULES.ROOMS, {
             per_page: 200
         });
