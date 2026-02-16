@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { format, addDays, isSameDay, parseISO } from 'date-fns';
+import { enUS, pl } from 'date-fns/locale';
+import { useTranslations, useLocale } from 'next-intl';
 import BookingModal from './BookingModal';
 import MassRateUpdateModal from './MassRateUpdateModal';
 
@@ -19,6 +21,10 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     // Smooth drag-to-scroll implementation
+    const t = useTranslations('Dashboard');
+    const locale = useLocale();
+    const dateLocale = locale === 'pl' ? pl : enUS;
+
     const [isDragging, setIsDragging] = useState(false);
     const [hasDragged, setHasDragged] = useState(false);
     const [startX, setStartX] = useState(0);
@@ -76,7 +82,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
 
     // Group days by month for the orientation header
     const months = data.days.reduce((acc: any[], day: string) => {
-        const monthName = format(parseISO(day), 'MMMM yyyy');
+        const monthName = format(parseISO(day), 'MMMM yyyy', { locale: dateLocale });
         if (acc.length === 0 || acc[acc.length - 1].name !== monthName) {
             acc.push({ name: monthName, count: 1 });
         } else {
@@ -99,7 +105,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                     <thead>
                         <tr className="bg-neutral-800/60">
                             <th className="border-r border-white/5 sticky left-0 bg-neutral-900 z-50 w-[300px] min-w-[300px] p-4 text-left shadow-2xl">
-                                <span className="text-[10px] font-black uppercase text-neutral-500 tracking-[0.2em]">Inventory Timeline</span>
+                                <span className="text-[10px] font-black uppercase text-neutral-500 tracking-[0.2em]">{t('timeline')}</span>
                             </th>
                             {months.map((month: any, i: number) => (
                                 <th
@@ -120,19 +126,19 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                         </tr>
                         <tr className="bg-neutral-800/20">
                             <th className="p-8 text-left border-r border-white/5 sticky left-0 bg-neutral-900 z-50 w-[300px] min-w-[300px]">
-                                <span className="text-[9px] uppercase font-black tracking-[0.3em] text-neutral-600">Accommodation Unit</span>
+                                <span className="text-[9px] uppercase font-black tracking-[0.3em] text-neutral-600">{t('unit')}</span>
                             </th>
                             {data.days.map((day: string) => {
                                 const isToday = day === todayStr;
                                 return (
                                     <th key={day} className={`p-6 border-r border-white/5 text-center min-w-[120px] transition-colors ${isToday ? 'bg-hotel-gold/5' : ''}`}>
                                         <div className={`text-[10px] uppercase font-bold tracking-widest ${isToday ? 'text-hotel-gold' : 'text-neutral-600'}`}>
-                                            {format(parseISO(day), 'EEE')}
+                                            {format(parseISO(day), 'EEE', { locale: dateLocale })}
                                         </div>
                                         <div className={`text-xl font-black ${isToday ? 'text-hotel-gold' : 'text-white/80'}`}>
                                             {format(parseISO(day), 'd')}
                                         </div>
-                                        {isToday && <div className="today-indicator text-[8px] font-black text-hotel-gold uppercase mt-1 px-2 py-0.5 bg-hotel-gold/10 rounded-full">Today</div>}
+                                        {isToday && <div className="today-indicator text-[8px] font-black text-hotel-gold uppercase mt-1 px-2 py-0.5 bg-hotel-gold/10 rounded-full">{t('today')}</div>}
                                     </th>
                                 );
                             })}
@@ -148,7 +154,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                     <div className="flex items-center gap-4">
                                         <div className="w-2.5 h-2.5 rounded-full bg-hotel-gold shadow-[0_0_10px_rgba(166,138,93,0.3)] group-hover:scale-125 transition-transform"></div>
                                         <div className="flex flex-col text-left">
-                                            <div className="text-lg text-white font-black tracking-tight leading-tight">{room.name}</div>
+                                            <div className="text-lg text-white font-black tracking-tight leading-tight">{room.internalName || room.name}</div>
                                             <div className="text-[9px] text-neutral-500 font-bold uppercase tracking-[0.2em] mt-0.5">{room.number}</div>
                                         </div>
                                     </div>

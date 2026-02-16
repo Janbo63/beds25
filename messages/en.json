@@ -1,0 +1,14 @@
+{
+    "Dashboard": {
+        "title": "Dashboard",
+        "timeline": "Inventory Timeline",
+        "unit": "Accommodation Unit",
+        "today": "Today"
+    },
+    "Theme": {
+        "toggle": "Toggle Theme"
+    },
+    "Language": {
+        "switch": "Switch Language"
+    }
+}

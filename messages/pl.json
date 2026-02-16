@@ -1,0 +1,14 @@
+{
+    "Dashboard": {
+        "title": "Panel Sterowania",
+        "timeline": "Oś Czasu",
+        "unit": "Jednostka Zakwaterowania",
+        "today": "Dzisiaj"
+    },
+    "Theme": {
+        "toggle": "Przełącz Motyw"
+    },
+    "Language": {
+        "switch": "Zmień Język"
+    }
+}

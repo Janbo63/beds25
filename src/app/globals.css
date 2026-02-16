@@ -6,7 +6,14 @@
   --color-hotel-dark: #0a0a0a;
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+  --background: #ededed;
+  --foreground: #0a0a0a;
+}
+
+.dark {
   --background: #0a0a0a;
   --foreground: #ededed;
 }

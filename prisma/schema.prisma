@@ -10,6 +10,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Organization {
+  id          String   @id @default(cuid())
+  name        String   @unique   // "Hotel Marysieńka"
+  slug        String   @unique   // "hotel-marysienka" (for URLs/subdomains)
+  email       String?
+  phone       String?
+  currency    String?  @default("EUR")
+  language    String?  @default("en") // Default UI language
+  logoUrl     String?
+  website     String?
+  properties  Property[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model Property {
   id          String   @id @default(cuid())
   name        String   @unique
@@ -34,6 +49,8 @@ model Property {
   bookingComId String? @unique // Booking.com Bhid
   airbnbId     String? @unique
   zohoAdminId  String? @unique // Link to Zoho "Booking Admins" module
+  organizationId String? // Tenant/owner
+  organization   Organization? @relation(fields: [organizationId], references: [id])
   media        Media[]
   rooms        Room[]
 }
@@ -62,6 +79,7 @@ model ChannelSettings {
 
 model Room {
   id          String   @id @default(cuid())
+  internalName String? // Custom name for dashboard display
   number      String?
   name        String?
   description String?
