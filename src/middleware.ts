@@ -1,17 +1,17 @@
-import createMiddleware from 'next-intl/middleware';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-export default createMiddleware({
-    // A list of all locales that are supported
-    locales: ['en', 'pl'],
-
-    // Used when no locale matches
-    defaultLocale: 'en',
-
-    // Don't prefix the URL with the locale
-    localePrefix: 'never'
-});
+/**
+ * Minimal middleware — locale detection is handled by src/i18n/request.ts.
+ * The next-intl createMiddleware was removed because localePrefix: 'never'
+ * makes it effectively a no-op, and it caused webServer startup timeouts
+ * in CI (Playwright).
+ */
+export function middleware(request: NextRequest) {
+    return NextResponse.next();
+}
 
 export const config = {
-    // Match only internationalized pathnames
+    // Only run on page routes — skip API, static files, and Next.js internals
     matcher: ['/((?!api|_next|.*\\..*).*)']
 };
