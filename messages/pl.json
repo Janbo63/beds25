@@ -1,6 +1,7 @@
 {
     "Homepage": {
-        "title": "Zagroda Alpakoterapii",
+        "heroName": "Zagroda",
+        "heroHighlight": "Alpakoterapii",
         "subtitle": "Doświadcz magii alpakoterapii w naszym spokojnym gospodarstwie.",
         "heroButton": "Zarządzaj Rezerwacjami",
         "checkInLabel": "Data przyjazdu / wyjazdu",

@@ -13,18 +13,18 @@ export default async function BookingPage() {
   });
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white selection:bg-hotel-gold/30 transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground selection:bg-hotel-gold/30 transition-colors duration-300">
       {/* Hero Section */}
       <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1518398046578-8ccaad622617?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40 scale-105"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-alpaca-green/60 to-white dark:to-neutral-950 transition-colors duration-300"></div>
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1518398046578-8ccaad622617?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40 dark:opacity-40 scale-105"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-alpaca-green/60 to-[var(--background)] transition-colors duration-300"></div>
 
         <div className="relative z-10 text-center space-y-6 px-4">
           <div className="flex justify-center mb-4">
             <div className="bg-alpaca-green p-4 rounded-full shadow-2xl border-2 border-hotel-gold/50 text-3xl">🦙</div>
           </div>
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-xl">
-            Zagroda <span className="text-hotel-gold italic">{t('title').includes('Alpako') ? 'Alpakoterapii' : 'Therapy Farm'}</span>
+            {t('heroName')} <span className="text-hotel-gold italic">{t('heroHighlight')}</span>
           </h1>
           <p className="text-lg md:text-xl text-neutral-200 font-light max-w-2xl mx-auto backdrop-blur-sm bg-black/20 p-4 rounded-xl">
             {t('subtitle')}
@@ -37,14 +37,14 @@ export default async function BookingPage() {
 
       {/* Booking Widget */}
       <section className="max-w-4xl mx-auto -mt-12 relative z-20 px-4">
-        <div className="bg-white/80 dark:bg-white/5 backdrop-blur-xl p-8 rounded-3xl shadow-2xl flex flex-col md:flex-row gap-6 items-end border border-neutral-200 dark:border-white/10 transition-colors duration-300">
+        <div className="bg-neutral-100/90 dark:bg-white/5 backdrop-blur-xl p-8 rounded-3xl shadow-2xl flex flex-col md:flex-row gap-6 items-end border border-neutral-300 dark:border-white/10 transition-colors duration-300">
           <div className="flex-1 space-y-2">
             <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">{t('checkInLabel')}</label>
-            <input type="text" placeholder={t('checkInPlaceholder')} className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl p-4 focus:ring-2 focus:ring-hotel-gold outline-none transition-all text-neutral-900 dark:text-white placeholder:text-neutral-400" />
+            <input type="text" placeholder={t('checkInPlaceholder')} className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl p-4 focus:ring-2 focus:ring-hotel-gold outline-none transition-all text-neutral-900 dark:text-white placeholder:text-neutral-400" />
           </div>
           <div className="flex-1 space-y-2">
             <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">{t('guestsLabel')}</label>
-            <select className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl p-4 focus:ring-2 focus:ring-hotel-gold outline-none appearance-none transition-all text-neutral-900 dark:text-white">
+            <select className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-xl p-4 focus:ring-2 focus:ring-hotel-gold outline-none appearance-none transition-all text-neutral-900 dark:text-white">
               <option>{t('guest1')}</option>
               <option>{t('guest2')}</option>
               <option>{t('guestMore')}</option>
@@ -66,7 +66,7 @@ export default async function BookingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {rooms.map((room) => (
             <div key={room.id} className="group cursor-pointer">
-              <div className="aspect-[16/10] overflow-hidden rounded-3xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xl relative transition-colors duration-300">
+              <div className="aspect-[16/10] overflow-hidden rounded-3xl bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 shadow-2xl relative transition-colors duration-300">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10 opacity-60"></div>
                 <img
                   src={room.media[0]?.url || 'https://images.unsplash.com/photo-1590059132718-5ec9e32abc32?q=80&w=1974&auto=format&fit=crop'}
@@ -88,7 +88,7 @@ export default async function BookingPage() {
         </div>
       </section>
 
-      <footer className="py-12 border-t border-neutral-200 dark:border-neutral-900 text-center text-neutral-400 dark:text-neutral-600 text-sm transition-colors duration-300">
+      <footer className="py-12 border-t border-neutral-300 dark:border-neutral-900 text-center text-neutral-400 dark:text-neutral-600 text-sm transition-colors duration-300">
         <Link href="/dashboard" className="hover:text-neutral-600 dark:hover:text-neutral-400 transition-colors">{t('adminLink')}</Link>
       </footer>
     </div>

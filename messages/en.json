@@ -1,6 +1,7 @@
 {
     "Homepage": {
-        "title": "Alpaca Therapy Farm",
+        "heroName": "Alpaca",
+        "heroHighlight": "Therapy Farm",
         "subtitle": "Experience the magic of alpaca therapy at our peaceful farm.",
         "heroButton": "Manage Reservations",
         "checkInLabel": "Check-in / Check-out Date",
