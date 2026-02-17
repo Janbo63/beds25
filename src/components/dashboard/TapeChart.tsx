@@ -99,22 +99,22 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                 onMouseLeave={handleMouseLeaveOrUp}
                 onMouseUp={handleMouseLeaveOrUp}
                 onMouseMove={handleMouseMove}
-                className={`overflow-x-auto relative rounded-3xl border border-white/5 bg-neutral-900/20 backdrop-blur-sm shadow-2xl select-none cursor-grab active:cursor-grabbing ${isDragging ? 'grabbing' : ''}`}
+                className={`overflow-x-auto relative rounded-3xl border border-neutral-200 dark:border-white/5 bg-white/80 dark:bg-neutral-900/20 backdrop-blur-sm shadow-2xl select-none cursor-grab active:cursor-grabbing ${isDragging ? 'grabbing' : ''}`}
             >
                 <table className="w-full border-collapse">
                     <thead>
-                        <tr className="bg-neutral-800/60">
-                            <th className="border-r border-white/5 sticky left-0 bg-neutral-900 z-50 w-[300px] min-w-[300px] p-4 text-left shadow-2xl">
+                        <tr className="bg-neutral-100/60 dark:bg-neutral-800/60">
+                            <th className="border-r border-neutral-200 dark:border-white/5 sticky left-0 bg-white dark:bg-neutral-900 z-50 w-[300px] min-w-[300px] p-4 text-left shadow-2xl">
                                 <span className="text-[10px] font-black uppercase text-neutral-500 tracking-[0.2em]">{t('timeline')}</span>
                             </th>
                             {months.map((month: any, i: number) => (
                                 <th
                                     key={i}
                                     colSpan={month.count}
-                                    className="p-0 border-r border-white/5 bg-neutral-900/40 relative h-12"
+                                    className="p-0 border-r border-neutral-200 dark:border-white/5 bg-neutral-50/40 dark:bg-neutral-900/40 relative h-12"
                                 >
                                     <div className="sticky left-[300px] right-0 flex justify-center px-4 w-[calc(100vw-350px)] max-w-full">
-                                        <div className="bg-neutral-800/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 shadow-lg flex items-center gap-2">
+                                        <div className="bg-neutral-200/80 dark:bg-neutral-800/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-neutral-300 dark:border-white/10 shadow-lg flex items-center gap-2">
                                             <span className="w-1.5 h-1.5 rounded-full bg-hotel-gold animate-pulse"></span>
                                             <span className="text-[10px] font-black uppercase text-hotel-gold tracking-widest whitespace-nowrap">
                                                 {month.name}
@@ -124,18 +124,18 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                 </th>
                             ))}
                         </tr>
-                        <tr className="bg-neutral-800/20">
-                            <th className="p-8 text-left border-r border-white/5 sticky left-0 bg-neutral-900 z-50 w-[300px] min-w-[300px]">
+                        <tr className="bg-neutral-50/20 dark:bg-neutral-800/20">
+                            <th className="p-8 text-left border-r border-neutral-200 dark:border-white/5 sticky left-0 bg-white dark:bg-neutral-900 z-50 w-[300px] min-w-[300px]">
                                 <span className="text-[9px] uppercase font-black tracking-[0.3em] text-neutral-600">{t('unit')}</span>
                             </th>
                             {data.days.map((day: string) => {
                                 const isToday = day === todayStr;
                                 return (
-                                    <th key={day} className={`p-6 border-r border-white/5 text-center min-w-[120px] transition-colors ${isToday ? 'bg-hotel-gold/5' : ''}`}>
+                                    <th key={day} className={`p-6 border-r border-neutral-200 dark:border-white/5 text-center min-w-[120px] transition-colors ${isToday ? 'bg-hotel-gold/5' : ''}`}>
                                         <div className={`text-[10px] uppercase font-bold tracking-widest ${isToday ? 'text-hotel-gold' : 'text-neutral-600'}`}>
                                             {format(parseISO(day), 'EEE', { locale: dateLocale })}
                                         </div>
-                                        <div className={`text-xl font-black ${isToday ? 'text-hotel-gold' : 'text-white/80'}`}>
+                                        <div className={`text-xl font-black ${isToday ? 'text-hotel-gold' : 'text-neutral-700 dark:text-white/80'}`}>
                                             {format(parseISO(day), 'd')}
                                         </div>
                                         {isToday && <div className="today-indicator text-[8px] font-black text-hotel-gold uppercase mt-1 px-2 py-0.5 bg-hotel-gold/10 rounded-full">{t('today')}</div>}
@@ -144,17 +144,17 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                             })}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
+                    <tbody className="divide-y divide-neutral-200 dark:divide-white/5">
                         {data.rooms.map((room: any) => (
-                            <tr key={room.id} className="group hover:bg-white/[0.01] transition-all">
+                            <tr key={room.id} className="group hover:bg-neutral-50/50 dark:hover:bg-white/[0.01] transition-all">
                                 <td
-                                    className="p-8 border-r border-white/5 sticky left-0 bg-neutral-900/98 z-30 font-bold whitespace-nowrap shadow-2xl transition-colors group-hover:bg-neutral-800 cursor-pointer hover:text-hotel-gold"
+                                    className="p-8 border-r border-neutral-200 dark:border-white/5 sticky left-0 bg-white/98 dark:bg-neutral-900/98 z-30 font-bold whitespace-nowrap shadow-2xl transition-colors group-hover:bg-neutral-50 dark:group-hover:bg-neutral-800 cursor-pointer hover:text-hotel-gold"
                                     onClick={() => setMassUpdateRoom({ id: room.id, number: room.number })}
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className="w-2.5 h-2.5 rounded-full bg-hotel-gold shadow-[0_0_10px_rgba(166,138,93,0.3)] group-hover:scale-125 transition-transform"></div>
                                         <div className="flex flex-col text-left">
-                                            <div className="text-lg text-white font-black tracking-tight leading-tight">{room.internalName || room.name}</div>
+                                            <div className="text-lg text-neutral-800 dark:text-white font-black tracking-tight leading-tight">{room.internalName || room.name}</div>
                                             <div className="text-[9px] text-neutral-500 font-bold uppercase tracking-[0.2em] mt-0.5">{room.number}</div>
                                         </div>
                                     </div>
@@ -211,8 +211,8 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                         <td
                                             key={day}
                                             className={`p-0 h-28 text-center day-cell relative transition-all group ${isToday ? 'bg-hotel-gold/[0.02]' : ''
-                                                } ${!booking && !isEditing ? 'hover:bg-alpaca-green/[0.05] cursor-pointer border-r border-white/[0.03]' : ''
-                                                } ${isEditing ? 'bg-hotel-gold/10 border-r border-white/[0.03]' : ''
+                                                } ${!booking && !isEditing ? 'hover:bg-alpaca-green/[0.05] cursor-pointer border-r border-neutral-200/50 dark:border-white/[0.03]' : ''
+                                                } ${isEditing ? 'bg-hotel-gold/10 border-r border-neutral-200/50 dark:border-white/[0.03]' : ''
                                                 } ${booking ? 'border-r-0' : ''
                                                 }`}
                                             onClick={() => {

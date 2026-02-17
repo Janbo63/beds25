@@ -6,7 +6,7 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="flex min-h-screen bg-neutral-950">
+        <div className="flex min-h-screen bg-neutral-100 dark:bg-neutral-950 transition-colors">
             <Sidebar />
             <div className="flex-1 max-h-screen overflow-y-auto custom-scrollbar">
                 {children}
