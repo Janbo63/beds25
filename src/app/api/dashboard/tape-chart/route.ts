@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
                 id: room.id,
                 number: room.number || room.name,
                 name: room.name,
+                internalName: room.internalName,
                 type: room.name,
                 basePrice: room.basePrice,
                 prices,

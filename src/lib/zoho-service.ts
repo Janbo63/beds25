@@ -154,6 +154,7 @@ export function mapRoomToZoho(room: any): ZohoRecord {
         Beds24_Room_ID: room.externalId,
         BookingCom_Room_ID: room.bookingComRoomId,
         Airbnb_Room_ID: room.airbnbRoomId,
+        Internal_Name: room.internalName,
     };
 }
 
@@ -177,6 +178,7 @@ function mapZohoToRoom(zohoRecord: ZohoRecord): any {
         externalId: zohoRecord.Beds24_Room_ID,
         bookingComRoomId: zohoRecord.BookingCom_Room_ID,
         airbnbRoomId: zohoRecord.Airbnb_Room_ID,
+        internalName: zohoRecord.Internal_Name,
         // Property link needs to be handled separately or via lookup
         zohoAdminId: zohoRecord.Property?.id
     };
