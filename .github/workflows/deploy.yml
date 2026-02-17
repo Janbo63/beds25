@@ -92,6 +92,9 @@ jobs:
           # Navigate to app directory
           cd /var/www/beds25
           
+          # Ensure git safe.directory is set
+          git config --global --add safe.directory /var/www/beds25 2>/dev/null || true
+          
           # Pull latest changes
           echo "📥 Pulling latest code from GitHub..."
           git pull origin main
@@ -106,7 +109,7 @@ jobs:
           
           # Run database migrations
           echo "🗄️  Applying database migrations..."
-          npx prisma db push
+          npx prisma db push --accept-data-loss
           
           # Build application
           echo "🏗️  Building application..."
@@ -114,7 +117,7 @@ jobs:
           
           # Restart PM2 process
           echo "♻️  Restarting application..."
-          pm2 restart beds25 || pm2 start npm --name "beds25" -- start
+          pm2 restart beds25 || (fuser -k 3003/tcp 2>/dev/null; sleep 1; pm2 start node_modules/.bin/next --name "beds25" -- start -p 3003)
           
           # Save PM2 process list
           pm2 save

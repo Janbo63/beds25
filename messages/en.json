@@ -1,4 +1,20 @@
 {
+    "Homepage": {
+        "title": "Alpaca Therapy Farm",
+        "subtitle": "Experience the magic of alpaca therapy at our peaceful farm.",
+        "heroButton": "Manage Reservations",
+        "checkInLabel": "Check-in / Check-out Date",
+        "checkInPlaceholder": "Select dates",
+        "guestsLabel": "Number of Guests",
+        "guest1": "1 Person",
+        "guest2": "2 People",
+        "guestMore": "More",
+        "searchButton": "Search Accommodation",
+        "roomsTitle": "Our Rooms & Apartments",
+        "priceFrom": "From {price} PLN / night",
+        "available": "Available",
+        "adminLink": "Admin Dashboard"
+    },
     "Dashboard": {
         "title": "Dashboard",
         "timeline": "Inventory Timeline",

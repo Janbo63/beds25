@@ -1,4 +1,20 @@
 {
+    "Homepage": {
+        "title": "Zagroda Alpakoterapii",
+        "subtitle": "Doświadcz magii alpakoterapii w naszym spokojnym gospodarstwie.",
+        "heroButton": "Zarządzaj Rezerwacjami",
+        "checkInLabel": "Data przyjazdu / wyjazdu",
+        "checkInPlaceholder": "Wybierz termin",
+        "guestsLabel": "Liczba gości",
+        "guest1": "1 Osoba",
+        "guest2": "2 Osoby",
+        "guestMore": "Więcej",
+        "searchButton": "Szukaj noclegu",
+        "roomsTitle": "Nasze Pokoje i Apartamenty",
+        "priceFrom": "Cena od {price} zł / noc",
+        "available": "Dostępny",
+        "adminLink": "Panel Sterowania"
+    },
     "Dashboard": {
         "title": "Panel Sterowania",
         "timeline": "Oś Czasu",
