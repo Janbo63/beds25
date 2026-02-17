@@ -388,6 +388,66 @@ export const roomService = {
     },
 
     /**
+     * Create a room in Zoho CRM, then sync to local DB
+     */
+    async create(roomData: any) {
+        let zohoRecord: any;
+        if (process.env.ZOHO_CLIENT_ID === 'dummy') {
+            console.log('Skipping Zoho Room Create (CI Mode)');
+            zohoRecord = { id: `mock-room-id-${Date.now()}` };
+        } else {
+            const zohoData = mapRoomToZoho(roomData);
+            zohoRecord = await zohoClient.createRecord(ZOHO_MODULES.ROOMS, zohoData);
+        }
+
+        const localRoom = await prisma.room.create({
+            data: {
+                id: zohoRecord.id,
+                number: roomData.number,
+                name: roomData.name || roomData.number,
+                basePrice: roomData.basePrice || 0,
+                capacity: roomData.capacity || 2,
+                maxAdults: roomData.maxAdults || 2,
+                maxChildren: roomData.maxChildren || 0,
+                minNights: roomData.minNights || 1,
+                property: { connect: { id: roomData.propertyId } },
+            }
+        });
+
+        return localRoom;
+    },
+
+    /**
+     * Update a room in Zoho CRM, then sync to local DB
+     */
+    async update(id: string, updates: any) {
+        if (process.env.ZOHO_CLIENT_ID !== 'dummy') {
+            const zohoData = mapRoomToZoho({ id, ...updates });
+            await zohoClient.updateRecord(ZOHO_MODULES.ROOMS, id, zohoData);
+        }
+
+        const localRoom = await prisma.room.update({
+            where: { id },
+            data: updates,
+        });
+
+        return localRoom;
+    },
+
+    /**
+     * Delete a room from Zoho CRM and local DB
+     */
+    async delete(id: string) {
+        if (process.env.ZOHO_CLIENT_ID !== 'dummy') {
+            await zohoClient.deleteRecord(ZOHO_MODULES.ROOMS, id);
+        }
+
+        await prisma.room.delete({
+            where: { id },
+        });
+    },
+
+    /**
      * Sync from Zoho
      * @deprecated use syncFromZohoToLocal
      */
