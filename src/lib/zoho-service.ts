@@ -338,7 +338,8 @@ export const roomService = {
         if (process.env.ZOHO_CLIENT_ID === 'dummy') return;
 
         const response = await zohoClient.getRecords(ZOHO_MODULES.ROOMS, {
-            per_page: 200
+            per_page: 200,
+            fields: ['id', 'Name', 'Room_Name', 'Base_Price', 'Capacity', 'Max_Adults', 'Max_Children', 'Min_Nights', 'Room_Type', 'Smoking_Policy', 'Floor', 'View_Type', 'Beds24_Room_ID', 'BookingCom_Room_ID', 'Airbnb_Room_ID', 'Internal_Name', 'Property']
         });
 
         if (!response.data) return;
