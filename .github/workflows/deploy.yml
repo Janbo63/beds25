@@ -111,6 +111,10 @@ jobs:
           echo "🗄️  Applying database migrations..."
           npx prisma db push --accept-data-loss
           
+          # Clean stale build artifacts (prevents EACCES from root-owned .next/)
+          echo "🧹 Cleaning stale build artifacts..."
+          rm -rf .next
+          
           # Build application
           echo "🏗️  Building application..."
           npm run build
