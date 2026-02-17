@@ -31,7 +31,7 @@ Beds25 is a **staff-facing booking management system** — not a customer-facing
 - **Database**: SQLite (Prisma ORM) + Zoho CRM REST API v6
 - **Deployment**: Hostinger VPS, port 3003, PM2 process
 - **CI/CD**: GitHub Actions (repo: `Janbo63/beds25`)
-- **Domain**: TBD — options: `bookings.zagrodaalpakoterapii.com` or `beds25.futuresolutionstestbed.eu`
+- **Domain**: `bookings.zagrodaalpakoterapii.com` (Caddy reverse proxy → port 3003)
 
 ## Zoho CRM Modules
 
@@ -64,9 +64,26 @@ Beds25 is a **staff-facing booking management system** — not a customer-facing
 
 ## Known Gotchas
 
+### Zoho API
 - Zoho field names are **case-sensitive** — `Check_In` not `check_in`
 - Zoho OAuth tokens expire — handle `401 Unauthorized` with token refresh
+- In CI, Zoho credentials are set to `dummy` — all Zoho API calls must be guarded with `if (process.env.ZOHO_CLIENT_ID !== 'dummy')` to avoid CI failures
+
+### Database
 - SQLite locks on concurrent writes — only one write operation at a time
+- In CI, use `prisma db push --accept-data-loss` to avoid interactive prompts
+- CI uses `file:./ci.db` (ephemeral) — never the production `dev.db`
+
+### Deployment (Hostinger VPS)
+- **PM2 processes are per-user** — root's PM2 list is invisible to the `beds25` user. The CI deploys as `beds25` but PM2 was started by `root`. Use `pm2 restart beds25` as root after deploy.
+- **git safe.directory** — when the repo dir is owned by a different user, git refuses to operate. Fix: `git config --global --add safe.directory /var/www/beds25` for both `root` and `beds25` users.
+- **File ownership** — if `root` runs `npm run build`, the `.next/` directory becomes root-owned. The `beds25` user cannot overwrite it during CI deploy. Fix: `chown -R beds25:beds25 /var/www/beds25`
+- **Port conflicts** — always use `fuser -k 3003/tcp` before starting a new process if the previous one didn't shut down cleanly. Zombie Node processes can hold ports.
+- **PM2 start command** — do NOT use `PORT=3003 pm2 start npm -- start`. The PORT env var isn't reliably passed through. Instead: `pm2 start node_modules/.bin/next --name "beds25" -- start -p 3003`
+
+### i18n / next-intl
+- Next.js 16 deprecated `middleware.ts` in favor of `proxy` — avoid `createMiddleware` from `next-intl` as it blocks server startup in CI
+- Language switching sets `NEXT_LOCALE` cookie and calls `router.refresh()` — server components must use `getTranslations()` from `next-intl/server`
 - iCal imports can have timezone issues (always normalize to `Europe/Warsaw`)
 
 ## Key Files
