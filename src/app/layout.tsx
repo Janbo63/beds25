@@ -39,7 +39,7 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           <Providers>
             {children}
-            <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 p-2 rounded-full bg-neutral-900/80 backdrop-blur-md border border-white/10 shadow-2xl">
+            <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 p-2 rounded-full bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border border-neutral-300 dark:border-white/10 shadow-2xl transition-colors duration-300">
               <LanguageSwitch />
               <div className="w-px h-4 bg-white/10"></div>
               <ThemeToggle />

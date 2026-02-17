@@ -12,7 +12,6 @@ export default function LanguageSwitch() {
     const toggleLanguage = () => {
         const nextLocale = locale === 'en' ? 'pl' : 'en';
         startTransition(() => {
-            // Set cookie manually since we use 'never' prefix
             document.cookie = `NEXT_LOCALE=${nextLocale}; path=/; max-age=31536000; SameSite=Lax`;
             router.refresh();
         });
@@ -22,11 +21,11 @@ export default function LanguageSwitch() {
         <button
             onClick={toggleLanguage}
             disabled={isPending}
-            className="px-3 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-bold uppercase tracking-widest text-neutral-400 hover:text-hotel-gold transition-colors flex items-center gap-2"
+            className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"
         >
-            <span className={locale === 'en' ? 'text-white' : 'text-neutral-600'}>EN</span>
-            <span className="text-white/20">/</span>
-            <span className={locale === 'pl' ? 'text-white' : 'text-neutral-600'}>PL</span>
+            <span className={locale === 'en' ? 'text-hotel-gold' : 'text-neutral-400'}>EN</span>
+            <span className="text-neutral-500">/</span>
+            <span className={locale === 'pl' ? 'text-hotel-gold' : 'text-neutral-400'}>PL</span>
         </button>
     );
 }
