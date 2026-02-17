@@ -200,9 +200,9 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-3xl w-full max-w-xl shadow-2xl relative">
-                <button onClick={onClose} className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors">✕</button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-8 rounded-3xl w-full max-w-xl shadow-2xl relative">
+                <button onClick={onClose} className="absolute top-6 right-6 text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-white transition-colors">✕</button>
 
                 <h2 className="text-2xl font-bold mb-8">Manual Booking Entry</h2>
 
@@ -218,7 +218,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             <label className="text-[10px] uppercase text-neutral-500 font-bold">Select Room</label>
                             <select
                                 required
-                                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold"
+                                className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
                                 value={formData.roomId}
                                 onChange={e => {
                                     const room = rooms.find(r => r.id === e.target.value);
@@ -233,7 +233,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] uppercase text-neutral-500 font-bold">Base Price (zł)</label>
-                            <div className="w-full bg-neutral-950/50 border border-neutral-800 rounded-xl p-3 text-neutral-400">
+                            <div className="w-full bg-neutral-100 dark:bg-neutral-950/50 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 text-neutral-500 dark:text-neutral-400">
                                 {rooms.find(r => r.id === formData.roomId)?.basePrice || '0'} zł / night
                             </div>
                         </div>
@@ -260,7 +260,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                         <input
                             required
                             type="text"
-                            className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold"
+                            className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
                             value={formData.guestName}
                             onChange={e => setFormData({ ...formData, guestName: e.target.value })}
                         />
@@ -274,7 +274,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                                 type="number"
                                 min="1"
                                 max="10"
-                                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold"
+                                className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
                                 value={formData.numAdults}
                                 onChange={e => {
                                     const newAdults = parseInt(e.target.value) || 1;
@@ -289,7 +289,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                                 type="number"
                                 min="0"
                                 max="10"
-                                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold"
+                                className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
                                 value={formData.numChildren}
                                 onChange={e => {
                                     const newChildren = parseInt(e.target.value) || 0;
@@ -329,7 +329,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             <input
                                 required
                                 type="date"
-                                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-white cursor-pointer hover:bg-neutral-900 transition-colors"
+                                className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-900 transition-colors"
                                 value={formData.checkIn}
                                 onChange={e => setFormData({ ...formData, checkIn: e.target.value })}
                             />
@@ -340,7 +340,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                                 required
                                 type="date"
                                 min={formData.checkIn}
-                                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-white cursor-pointer hover:bg-neutral-900 transition-colors"
+                                className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-900 transition-colors"
                                 value={formData.checkOut}
                                 onChange={e => setFormData({ ...formData, checkOut: e.target.value })}
                             />
@@ -358,7 +358,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             <input
                                 required
                                 type="number"
-                                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold"
+                                className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
                                 value={formData.totalPrice}
                                 onChange={e => setFormData({ ...formData, totalPrice: e.target.value })}
                             />
@@ -366,7 +366,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                         <div className="space-y-2">
                             <label className="text-[10px] uppercase text-neutral-500 font-bold">Status</label>
                             <select
-                                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold"
+                                className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
                                 value={formData.status}
                                 onChange={e => setFormData({ ...formData, status: e.target.value })}
                             >

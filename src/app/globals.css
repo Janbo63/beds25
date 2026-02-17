@@ -9,8 +9,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ededed;
-  --foreground: #0a0a0a;
+  --background: #f5f5f4;
+  --foreground: #1a1a1a;
 }
 
 .dark {
@@ -35,6 +35,10 @@ button,
 button:hover:not(:disabled),
 .button-glow:hover {
   filter: brightness(1.1);
+}
+
+.dark button:hover:not(:disabled),
+.dark .button-glow:hover {
   box-shadow: 0 0 20px rgba(166, 138, 93, 0.3);
 }
 
@@ -53,8 +57,13 @@ button:active:not(:disabled),
 
 /* Glassmorphism utility */
 .glass {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dark .glass {
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -63,28 +72,49 @@ button:active:not(:disabled),
 }
 
 .day-cell:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.dark .day-cell:hover {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar — Light mode */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.05);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #bbb;
   border: 2px solid transparent;
   background-clip: content-box;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
+  background: #A68A5D;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Custom Scrollbar — Dark mode */
+.dark ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #333;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
   background: #A68A5D;
   border: 2px solid transparent;
   background-clip: content-box;

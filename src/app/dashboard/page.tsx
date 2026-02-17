@@ -5,11 +5,9 @@ import TapeChart from '@/components/dashboard/TapeChart';
 import NewBookingModal from '@/components/dashboard/NewBookingModal';
 
 export default function DashboardPage() {
-    const [syncing, setSyncing] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
     const [quickBookingData, setQuickBookingData] = useState<any>(null);
-    const [syncStatus, setSyncStatus] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     useEffect(() => {
         setMounted(true);
@@ -25,43 +23,6 @@ export default function DashboardPage() {
         setIsNewBookingOpen(true);
     };
 
-    const handleSyncNow = async () => {
-        setSyncing(true);
-        setSyncStatus(null);
-        try {
-            const res = await fetch('/api/admin/sync-now', { method: 'POST' });
-            if (res.ok) {
-                setSyncStatus({ message: 'Synchronization complete!', type: 'success' });
-                setTimeout(() => window.location.reload(), 2000);
-            } else {
-                setSyncStatus({ message: 'Sync failed. Check settings.', type: 'error' });
-            }
-        } catch (err) {
-            setSyncStatus({ message: 'Network error during sync.', type: 'error' });
-        } finally {
-            setSyncing(false);
-        }
-    };
-
-    const handleReimport = async () => {
-        setSyncing(true);
-        setSyncStatus({ message: 'Re-importing data from Beds24...', type: 'success' });
-        try {
-            const res = await fetch('/api/admin/beds24/import', {
-                method: 'POST',
-                body: JSON.stringify({ inviteCode: 'REFRESH' }), // The backend should handle this or just trigger importBeds24Data
-                headers: { 'Content-Type': 'application/json' }
-            });
-            if (res.ok) {
-                setSyncStatus({ message: 'Data re-imported successfully!', type: 'success' });
-                setTimeout(() => window.location.reload(), 2000);
-            }
-        } catch (err) {
-            setSyncStatus({ message: 'Import failed.', type: 'error' });
-        } finally {
-            setSyncing(false);
-        }
-    };
 
     if (!mounted) return <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950" />;
 
@@ -87,13 +48,6 @@ export default function DashboardPage() {
                         Today
                     </button>
                     <button
-                        onClick={handleSyncNow}
-                        disabled={syncing}
-                        className="px-5 py-2.5 bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50 rounded-xl transition-all border border-neutral-200 dark:border-white/5 font-bold text-xs shadow-xl flex items-center gap-2 text-neutral-700 dark:text-neutral-200"
-                    >
-                        {syncing ? '⏳' : '📡'} Sync iCals
-                    </button>
-                    <button
                         onClick={handleManualBooking}
                         className="px-8 py-2.5 bg-hotel-gold text-black hover:bg-yellow-500 rounded-xl transition-all font-black text-xs shadow-xl shadow-hotel-gold/20 flex items-center gap-2"
                     >
@@ -102,13 +56,7 @@ export default function DashboardPage() {
                 </div>
             </header>
 
-            {syncStatus && (
-                <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 px-8 py-4 rounded-2xl shadow-2xl z-[200] animate-in slide-in-from-bottom-8 duration-500 flex items-center gap-3 border ${syncStatus.type === 'success' ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-rose-500 text-white border-rose-400'
-                    }`}>
-                    <span className="text-xl">{syncStatus.type === 'success' ? '✅' : '❌'}</span>
-                    <span className="font-bold tracking-tight">{syncStatus.message}</span>
-                </div>
-            )}
+
 
             <NewBookingModal
                 isOpen={isNewBookingOpen}

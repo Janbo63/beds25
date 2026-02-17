@@ -91,17 +91,17 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
         }
     };
 
-    const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-hotel-gold/50 focus:ring-1 focus:ring-hotel-gold/30 transition-all";
+    const inputClass = "w-full bg-neutral-100 dark:bg-white/5 border border-neutral-300 dark:border-white/10 rounded-xl px-4 py-2.5 text-neutral-900 dark:text-white text-sm focus:outline-none focus:border-hotel-gold/50 focus:ring-1 focus:ring-hotel-gold/30 transition-all";
     const labelClass = "text-[10px] uppercase text-neutral-500 font-bold tracking-tighter block mb-1.5";
-    const displayClass = "text-white font-semibold";
+    const displayClass = "text-neutral-900 dark:text-white font-semibold";
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-            <div className="bg-neutral-900 border border-white/10 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 dark:bg-black/80 backdrop-blur-md">
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-white/10 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300 max-h-[90vh] flex flex-col">
                 {/* Header */}
-                <div className="p-6 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-alpaca-green/20 to-transparent shrink-0">
+                <div className="p-6 border-b border-neutral-200 dark:border-white/5 flex justify-between items-center bg-gradient-to-r from-alpaca-green/10 dark:from-alpaca-green/20 to-transparent shrink-0">
                     <div>
-                        <h3 className="text-2xl font-bold text-white leading-tight">
+                        <h3 className="text-2xl font-bold text-neutral-900 dark:text-white leading-tight">
                             {isEditing ? 'Edit Booking' : 'Booking Details'}
                         </h3>
                         <p className="text-xs text-neutral-500 uppercase tracking-widest mt-1">
@@ -159,22 +159,22 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                                     value={status}
                                     onChange={(e) => setStatus(e.target.value)}
                                     className={`${inputClass} ${status === 'CONFIRMED' ? '!border-emerald-500/40 text-emerald-400' :
-                                            status === 'CANCELLED' ? '!border-rose-500/40 text-rose-400' :
-                                                status === 'BLOCKED' ? '!border-neutral-700 text-neutral-400' :
-                                                    '!border-amber-500/40 text-amber-400'
+                                        status === 'CANCELLED' ? '!border-rose-500/40 text-rose-400' :
+                                            status === 'BLOCKED' ? '!border-neutral-700 text-neutral-400' :
+                                                '!border-amber-500/40 text-amber-400'
                                         }`}
                                 >
-                                    <option value="CONFIRMED" className="bg-neutral-900">Confirmed</option>
-                                    <option value="REQUEST" className="bg-neutral-900">Request</option>
-                                    <option value="NEW" className="bg-neutral-900">New</option>
-                                    <option value="BLOCKED" className="bg-neutral-900">Blocked</option>
-                                    <option value="CANCELLED" className="bg-neutral-900">Cancelled</option>
+                                    <option value="CONFIRMED" className="bg-white dark:bg-neutral-900">Confirmed</option>
+                                    <option value="REQUEST" className="bg-white dark:bg-neutral-900">Request</option>
+                                    <option value="NEW" className="bg-white dark:bg-neutral-900">New</option>
+                                    <option value="BLOCKED" className="bg-white dark:bg-neutral-900">Blocked</option>
+                                    <option value="CANCELLED" className="bg-white dark:bg-neutral-900">Cancelled</option>
                                 </select>
                             ) : (
                                 <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-bold uppercase ${status === 'CONFIRMED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
-                                        status === 'CANCELLED' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30' :
-                                            status === 'BLOCKED' ? 'bg-neutral-800 text-neutral-400 border border-neutral-700' :
-                                                'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                                    status === 'CANCELLED' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30' :
+                                        status === 'BLOCKED' ? 'bg-neutral-800 text-neutral-400 border border-neutral-700' :
+                                            'bg-amber-500/10 text-amber-400 border border-amber-500/30'
                                     }`}>
                                     {status}
                                 </span>
