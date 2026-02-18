@@ -1,34 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { bookingService } from '@/lib/zoho-service';
-import { addDays, format, parseISO } from 'date-fns';
+import { addDays } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
 /**
+ * Health check — visit /api/webhooks/beds24 in browser to verify endpoint is live
+ */
+export async function GET() {
+    return NextResponse.json({ status: 'ok', endpoint: 'beds24-webhook', timestamp: new Date().toISOString() });
+}
+
+/**
  * Webhook Handler for Beds24 Auto Actions
  * 
- * Recommended Beds24 Auto Action Configuration:
- * Trigger: specific triggering action (New Booking, Modify Booking, Cancel Booking)
- * Action: "Send to URL"
- * URL: https://[YOUR_DOMAIN]/api/webhooks/beds24
- * Data: JSON
- * {
- *   "bookId": "[bookid]",
- *   "roomId": "[roomid]",
- *   "status": "[status]",
- *   "firstNight": "[firstnight]",
- *   "lastNight": "[lastnight]",
- *   "guestFirstName": "[guestfirstname]",
- *   "guestLastName": "[guestlastname]",
- *   "guestEmail": "[guestemail]",
- *   "guestPhone": "[guestphone]",
- *   "numAdult": "[numadult]",
- *   "numChild": "[numchild]",
- *   "price": "[price]",
- *   "referer": "[referer]",
- *   "apiSource": "[apisource]"
- * }
+ * Beds24 Auto Action Configuration:
+ * Trigger Tab: Trigger Action = Auto, Trigger Event = Booking, Trigger Time = Immediate
+ * Webhook Tab:
+ *   URL: https://bookings.zagrodaalpakoterapii.com/api/webhooks/beds24
+ *   Custom Header: Content-Type:application/json
+ *   Body Data:
+ *   {"bookId":"[BOOKID]","roomId":"[ROOMID]","status":"[STATUS]","firstNight":"[FIRSTNIGHT]","lastNight":"[LASTNIGHT]","guestFirstName":"[GUESTFIRSTNAME]","guestLastName":"[GUESTLASTNAME]","guestEmail":"[GUESTEMAIL]","guestPhone":"[GUESTPHONE]","numAdult":"[NUMADULT]","numChild":"[NUMCHILD]","price":"[PRICE]","referer":"[REFERER]","apiSource":"[APISOURCE]"}
  */
 export async function POST(request: NextRequest) {
     try {
@@ -42,7 +35,8 @@ export async function POST(request: NextRequest) {
         } = payload;
 
         if (!bookId || !roomId) {
-            return new NextResponse('Missing bookId or roomId', { status: 400 });
+            console.error('[Webhook] Missing bookId or roomId in payload');
+            return NextResponse.json({ error: 'Missing bookId or roomId' }, { status: 400 });
         }
 
         // Map Status
@@ -54,32 +48,34 @@ export async function POST(request: NextRequest) {
         else if (status === '4' || status === 'Black' || status === 'Blocked') mappedStatus = 'BLOCKED';
 
         // Normalize Dates
-        // Beds24 sends YYYY-MM-DD usually.
-        // lastNight is the night BEFORE checkout. Checkout is lastNight + 1 day.
+        // Beds24: lastNight is the last night of stay. Checkout = lastNight + 1 day.
         const checkIn = new Date(firstNight);
         const checkOut = addDays(new Date(lastNight), 1);
 
-        // Find Room (by externalId)
+        // Find Room (by externalId = Beds24 Room ID)
         const room = await prisma.room.findUnique({
             where: { externalId: roomId.toString() }
         });
 
         if (!room) {
-            console.error(`[Webhook] Room with externalId ${roomId} not found.`);
-            return new NextResponse(`Room ${roomId} not found`, { status: 404 });
+            console.error(`[Webhook] Room with externalId ${roomId} not found in Beds25 DB.`);
+            return NextResponse.json({ error: `Room ${roomId} not found` }, { status: 404 });
         }
 
-        // Check if booking exists
+        console.log(`[Webhook] Matched room: ${room.name} (${room.id})`);
+
+        // Check if booking already exists (update vs create)
         const existingBooking = await prisma.booking.findFirst({
             where: { externalId: bookId.toString() }
         });
 
+        // Build booking data — NOTE: do NOT include guestPhone here,
+        // it's not a field on the Booking model (phone lives on Guest model)
         const bookingData = {
-            roomId: room.id, // mapped local room ID
+            roomId: room.id,
             roomNumber: room.number, // needed for Zoho mapping
             guestName: `${guestFirstName || ''} ${guestLastName || ''}`.trim() || 'Guest',
             guestEmail: guestEmail || '',
-            guestPhone: guestPhone || '', // Add phone if schema supports it (Guest model does)
             checkIn,
             checkOut,
             status: mappedStatus,
@@ -87,7 +83,7 @@ export async function POST(request: NextRequest) {
             totalPrice: parseFloat(price || '0'),
             numAdults: parseInt(numAdult || '2'),
             numChildren: parseInt(numChild || '0'),
-            externalId: bookId.toString(), // Important: prevents outgoing sync loop!
+            externalId: bookId.toString(), // Prevents outgoing sync loop!
             notes: `Imported via Webhook from ${referer || 'Beds24'}`
         };
 
@@ -99,9 +95,13 @@ export async function POST(request: NextRequest) {
             await bookingService.create(bookingData);
         }
 
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        console.error('[Webhook] Error processing Beds24 webhook:', error);
-        return new NextResponse('Internal Server Error', { status: 500 });
+        console.log('[Webhook] Successfully processed Beds24 webhook');
+        return NextResponse.json({ success: true, bookId, roomId, status: mappedStatus });
+    } catch (error: any) {
+        console.error('[Webhook] Error processing Beds24 webhook:', error?.message || error);
+        return NextResponse.json(
+            { error: 'Internal Server Error', message: error?.message || 'Unknown error' },
+            { status: 500 }
+        );
     }
 }
