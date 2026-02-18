@@ -305,20 +305,27 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                     className={`flex flex-col items-center justify-center text-[10px] font-black uppercase px-3 shadow-lg cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden ${bookingColorClass}`}
                                                 >
                                                     <div className="sticky left-0 right-0 flex flex-col items-center gap-1 w-full px-2">
-                                                        <div className="flex items-center gap-1.5 opacity-90">
-                                                            <span className="scale-110">{booking.status === 'BLOCKED' ? '🔒' :
-                                                                booking.source?.toUpperCase() === 'AIRBNB' ? '🏠' :
-                                                                    booking.source?.toUpperCase().includes('BOOKING') ? '✈️' : '✨'}</span>
-                                                            {(isFirstDay || booking.totalPrice > 0) && (
-                                                                <span className="font-black text-white whitespace-nowrap">
-                                                                    {booking.totalPrice > 0 ? `${booking.totalPrice} zł` : ''}
+                                                        {isFirstDay ? (
+                                                            <>
+                                                                <div className="flex items-center gap-1.5 opacity-90">
+                                                                    <span className="scale-110">{booking.status === 'BLOCKED' ? '🔒' :
+                                                                        booking.source?.toUpperCase() === 'AIRBNB' ? '🏠' :
+                                                                            booking.source?.toUpperCase().includes('BOOKING') ? '✈️' : '✨'}</span>
+                                                                    {booking.totalPrice > 0 && (
+                                                                        <span className="font-black text-white whitespace-nowrap">
+                                                                            {booking.totalPrice} zł
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <span className="truncate w-full text-center font-black tracking-tight leading-none">
+                                                                    {booking.status === 'BLOCKED' ? 'Blocked' :
+                                                                        booking.status === 'CANCELLED' ? 'Cancelled' : booking.guestName}
                                                                 </span>
-                                                            )}
-                                                        </div>
-                                                        <span className="truncate w-full text-center font-black tracking-tight leading-none">
-                                                            {booking.status === 'BLOCKED' ? 'Blocked' :
-                                                                booking.status === 'CANCELLED' ? 'Cancelled' : booking.guestName}
-                                                        </span>
+                                                            </>
+                                                        ) : (
+                                                            /* Middle/last days: keep empty — the pill colour provides context */
+                                                            <span className="opacity-0 select-none">·</span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
