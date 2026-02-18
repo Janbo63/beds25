@@ -20,43 +20,36 @@ export async function GET() {
 }
 
 export async function POST() {
-    // Known Beds24 Room ID mapping (from Beds24 dashboard)
-    // These are the Beds24 Room IDs that correspond to our rooms
-    const mapping: Record<string, string> = {
-        'Apartment (Triple) with Mountain View': '223647',
-        'Triple Room with Private Bathroom 2': '269838',   // Must be before "Triple Room with Private Bathroom" for correct matching
-        'Triple Room with Private Bathroom': '223648',
-        'Caravan': '507521',
-    };
+    // Direct mapping: Production Room DB ID → Beds24 Room ID
+    // This avoids fuzzy name matching issues with similar room names
+    const mapping: Array<{ dbId: string; beds24Id: string; name: string }> = [
+        { dbId: '884394000000896001', beds24Id: '223647', name: 'Apartment (Triple) with Mountain View' },
+        { dbId: '884394000000894006', beds24Id: '223648', name: 'Triple Room with Private Bathroom' },
+        { dbId: '884394000000897001', beds24Id: '269838', name: 'Triple Room with Private Bathroom 2' },
+        { dbId: '884394000000884002', beds24Id: '507521', name: 'Caravan' },
+    ];
 
     const results: Array<{ room: string; status: string; externalId?: string }> = [];
 
-    for (const [roomName, beds24Id] of Object.entries(mapping)) {
-        const room = await prisma.room.findFirst({
-            where: {
-                OR: [
-                    { name: { contains: roomName } },
-                    { internalName: { contains: roomName } },
-                ]
-            }
-        });
+    for (const { dbId, beds24Id, name } of mapping) {
+        const room = await prisma.room.findUnique({ where: { id: dbId } });
 
         if (!room) {
-            results.push({ room: roomName, status: 'NOT_FOUND' });
+            results.push({ room: name, status: 'NOT_FOUND' });
             continue;
         }
 
         if (room.externalId === beds24Id) {
-            results.push({ room: roomName, status: 'ALREADY_SET', externalId: beds24Id });
+            results.push({ room: name, status: 'ALREADY_SET', externalId: beds24Id });
             continue;
         }
 
         await prisma.room.update({
-            where: { id: room.id },
+            where: { id: dbId },
             data: { externalId: beds24Id }
         });
 
-        results.push({ room: roomName, status: 'UPDATED', externalId: beds24Id });
+        results.push({ room: name, status: 'UPDATED', externalId: beds24Id });
     }
 
     return NextResponse.json({ success: true, results });
