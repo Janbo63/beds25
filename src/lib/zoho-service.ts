@@ -11,6 +11,7 @@
 import zohoClient, { ZohoRecord } from './zoho';
 import prisma from './prisma';
 import { format } from 'date-fns';
+import { createBeds24Booking, cancelBeds24Booking } from './beds24';
 
 /**
  * Zoho Module Names - matching your CRM setup
@@ -217,6 +218,23 @@ export const bookingService = {
             }
         }
 
+        // 3.5 Create in Beds24 if this is a direct/manual booking (no externalId yet)
+        if (!bookingData.externalId) {
+            console.log('[ZohoService] Pushing new booking to Beds24...');
+            try {
+                const beds24Id = await createBeds24Booking(bookingData);
+                if (beds24Id) {
+                    console.log(`[ZohoService] Beds24 Booking Created: ${beds24Id}`);
+                    bookingData.externalId = beds24Id.toString();
+                    bookingData.source = 'DIRECT'; // Ensure source is set
+                }
+            } catch (error) {
+                console.error('[ZohoService] Failed to push to Beds24:', error);
+                // We choose NOT to fail the whole process, but log verification needed
+                // Alternatively, throw error if strict sync is required
+            }
+        }
+
         // 4. Sync to local database
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { roomNumber, ...bookingDataForDb } = bookingData;
@@ -253,6 +271,21 @@ export const bookingService = {
      * Delete a booking from Zoho CRM and local DB
      */
     async delete(id: string) {
+        // 0. Get booking to find externalId for Beds24 cancellation
+        const booking = await prisma.booking.findUnique({
+            where: { id },
+            include: { room: { include: { property: true } } }
+        });
+
+        if (booking?.externalId) {
+            console.log(`[ZohoService] Cancelling Beds24 booking ${booking.externalId}...`);
+            try {
+                await cancelBeds24Booking(booking.externalId, booking.room?.property?.beds24InviteCode || undefined);
+            } catch (err) {
+                console.error('[ZohoService] Failed to cancel in Beds24:', err);
+            }
+        }
+
         // 1. Delete from Zoho CRM (Skip if in CI)
         if (process.env.ZOHO_CLIENT_ID !== 'dummy') {
             await zohoClient.deleteRecord(ZOHO_MODULES.BOOKINGS, id);

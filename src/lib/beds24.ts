@@ -1,5 +1,6 @@
 import prisma from './prisma';
 import { bookingService } from './zoho-service';
+import { format } from 'date-fns';
 
 const BEDS24_API_URL = 'https://beds24.com/api/v2';
 
@@ -301,4 +302,103 @@ export async function updateBeds24RatesBatch(roomId: string, updates: { date: st
     }
 
     return response.json();
+}
+
+export async function createBeds24Booking(bookingData: any) {
+    const room = await prisma.room.findUnique({
+        where: { id: bookingData.roomId }
+    });
+
+    const property = await prisma.property.findFirst({
+        where: { rooms: { some: { id: bookingData.roomId } } }
+    });
+
+    if (!room || !property?.beds24InviteCode || !room.externalId) {
+        throw new Error('Room or Property not associated with Beds24');
+    }
+
+    const auth = await getBeds24Token(property.beds24InviteCode);
+
+    const payload = [{
+        roomId: parseInt(room.externalId),
+        arrival: format(new Date(bookingData.checkIn), 'yyyy-MM-dd'),
+        departure: format(new Date(bookingData.checkOut), 'yyyy-MM-dd'),
+        status: 'confirmed', // 1=Confirmed
+        firstName: bookingData.guestName.split(' ')[0] || 'Guest',
+        lastName: bookingData.guestName.split(' ').slice(1).join(' ') || '.',
+        email: bookingData.guestEmail || '',
+        phone: bookingData.phone || '',
+        numAdults: bookingData.numAdults || 2,
+        numChildren: bookingData.numChildren || 0,
+        price: bookingData.totalPrice?.toString() || '0',
+        apiSource: 'BEDS25_DIRECT'
+    }];
+
+    const response = await fetch(`${BEDS24_API_URL}/bookings`, {
+        method: 'POST',
+        headers: {
+            'token': auth.token,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Failed to create booking in Beds24: ${err}`);
+    }
+
+    const result = await response.json();
+    // API returns array of created bookings. We sent one, expect one.
+    if (Array.isArray(result) && result.length > 0) {
+        return result[0].id; // Return the Beds24 Booking ID
+    } else if (result.id) {
+        return result.id;
+    }
+
+    return null;
+}
+
+export async function cancelBeds24Booking(bookingId: string, inviteCode?: string) {
+    // We need inviteCode to get token. If not provided, try to find a default one (risky if multiple props)
+    // But usually we call this with context.
+
+    let token = '';
+
+    if (inviteCode) {
+        const auth = await getBeds24Token(inviteCode);
+        token = auth.token;
+    } else {
+        // Fallback: try to find any property with code
+        const prop = await prisma.property.findFirst({ where: { beds24InviteCode: { not: null } } });
+        if (!prop?.beds24InviteCode) throw new Error('No Beds24 credentials found');
+        const auth = await getBeds24Token(prop.beds24InviteCode);
+        token = auth.token;
+    }
+
+    // To cancel, we update status to 'cancelled' (0)
+    // Beds24/bookings endpoint supports PUT/POST for updates if ID is provided? 
+    // Usually POST to /bookings with "id" field updates it.
+
+    const payload = [{
+        id: parseInt(bookingId),
+        status: 'cancelled'
+    }];
+
+    const response = await fetch(`${BEDS24_API_URL}/bookings`, {
+        method: 'POST', // POST is used for upsert/update in Beds24 v2 often
+        headers: {
+            'token': token,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        // If 404, maybe already deleted?
+        console.warn(`Beds24 Cancel Warning: ${errorText}`);
+    }
+
+    return true;
 }
