@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import MediaGallery from '@/components/dashboard/MediaGallery';
 
 export default function AdminSettings() {
     const [rooms, setRooms] = useState<any[]>([]);
@@ -449,16 +450,15 @@ export default function AdminSettings() {
                                         </div>
 
                                         <div className="space-y-3 pt-3 border-t border-white/5">
-                                            <label className="text-[10px] uppercase text-neutral-500 font-bold tracking-widest">Media</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {room.media?.map((m: any) => (
-                                                    <img key={m.id} src={m.url} className="w-12 h-12 object-cover rounded-lg border border-white/10" alt="" />
-                                                ))}
-                                                <label className="w-12 h-12 flex items-center justify-center bg-neutral-950 border border-dashed border-neutral-700 rounded-lg cursor-pointer hover:border-hotel-gold transition-colors">
-                                                    <input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleUploadMedia(e.target.files[0], room.id)} />
-                                                    <span className="text-neutral-600">+</span>
-                                                </label>
-                                            </div>
+                                            <MediaGallery
+                                                media={room.media || []}
+                                                roomId={room.id}
+                                                onMediaChange={() => {
+                                                    fetch('/api/admin/rooms')
+                                                        .then(res => res.json())
+                                                        .then(data => setRooms(data));
+                                                }}
+                                            />
                                         </div>
 
                                         <div className="space-y-3 pt-3 border-t border-white/5">

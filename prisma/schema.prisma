@@ -60,6 +60,9 @@ model Media {
   url         String
   alt         String?
   type        String   @default("IMAGE") // IMAGE, VIDEO
+  sortOrder   Int      @default(0)       // For carousel ordering
+  caption     String?                    // For carousel captions
+  isHero      Boolean  @default(false)   // Hero image/video for property or room
   propertyId  String?
   property    Property? @relation(fields: [propertyId], references: [id])
   roomId      String?
@@ -132,6 +135,7 @@ model Guest {
 
 model Booking {
   id          String   @id @default(cuid())
+  bookingRef  String?  @unique           // Human-readable: ZAT-2026-0042
   roomId      String
   room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   guestId     String?
@@ -145,13 +149,23 @@ model Booking {
   checkOut    DateTime
   arrivalTime String?
   totalPrice  Float
-  status      String   // "CONFIRMED", "CANCELLED", "NEW", "REQUEST", "BLOCKED"
-  source      String   // "DIRECT", "AIRBNB", "BOOKING.COM", "BEDS24"
+  status      String   // "CONFIRMED", "CANCELLED", "NEW", "REQUEST", "BLOCKED", "DEPOSIT_PAID", "FULLY_PAID"
+  source      String   // "DIRECT", "AIRBNB", "BOOKING.COM", "BEDS24", "WEBSITE"
   externalId  String?  @unique
   notes       String?  // Special requests/comments
   paymentMethod  String?  // "card", "wallet", "cash", "bank_transfer"
   paymentTiming  String?  // "pay_online_now", "pay_online_later", "pay_at_property"
-  paymentStatus  String?  @default("pending") // "pending", "paid", "refunded", "failed"
+  paymentStatus  String?  @default("pending") // "pending", "paid", "partial", "refunded", "failed"
+
+  // Split-payment fields (10% deposit + 90% balance)
+  depositAmount          Float?    // 10% deposit taken at booking
+  depositPaidAt          DateTime? // When deposit was paid
+  balanceAmount          Float?    // 90% remaining balance
+  balancePaidAt          DateTime? // When balance was charged
+  balanceDueDate         DateTime? // checkIn - 3 days
+  stripePaymentIntentId  String?   @unique // Stripe PI for deposit
+  stripeCustomerId       String?   // For charging saved card later
+
   bookingComOrderId      String? @unique
   bookingComPincode      String?
   bookingComReservation  String?
