@@ -304,9 +304,18 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                     style={bookingStyle}
                                                     className={`flex flex-col items-center justify-center text-[10px] font-black uppercase px-3 shadow-lg cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden ${bookingColorClass}`}
                                                 >
-                                                    <div className="sticky left-0 right-0 flex flex-col items-center gap-1 w-full px-2">
-                                                        {isFirstDay ? (
-                                                            <>
+                                                    {(() => {
+                                                        // Calculate which cell is the center of the booking
+                                                        const checkInDate = new Date(checkInStr + 'T12:00:00');
+                                                        const checkOutDate = new Date(checkOutStr + 'T12:00:00');
+                                                        const numNights = Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (24 * 60 * 60 * 1000));
+                                                        const currentDate = new Date(day + 'T12:00:00');
+                                                        const dayIndex = Math.round((currentDate.getTime() - checkInDate.getTime()) / (24 * 60 * 60 * 1000));
+                                                        const centerIndex = Math.floor((numNights - 1) / 2);
+                                                        const isCenterDay = dayIndex === centerIndex;
+
+                                                        return isCenterDay ? (
+                                                            <div className="sticky left-0 right-0 flex flex-col items-center gap-1 w-full px-2 overflow-visible whitespace-nowrap">
                                                                 <div className="flex items-center gap-1.5 opacity-90">
                                                                     <span className="scale-110">{booking.status === 'BLOCKED' ? '🔒' :
                                                                         booking.source?.toUpperCase() === 'AIRBNB' ? '🏠' :
@@ -317,16 +326,13 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                                         </span>
                                                                     )}
                                                                 </div>
-                                                                <span className="truncate w-full text-center font-black tracking-tight leading-none">
+                                                                <span className="truncate max-w-[200px] text-center font-black tracking-tight leading-none">
                                                                     {booking.status === 'BLOCKED' ? 'Blocked' :
                                                                         booking.status === 'CANCELLED' ? 'Cancelled' : booking.guestName}
                                                                 </span>
-                                                            </>
-                                                        ) : (
-                                                            /* Middle/last days: keep empty — the pill colour provides context */
-                                                            <span className="opacity-0 select-none">·</span>
-                                                        )}
-                                                    </div>
+                                                            </div>
+                                                        ) : null;
+                                                    })()}
                                                 </div>
                                             )}
                                         </td>
