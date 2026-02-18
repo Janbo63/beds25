@@ -23,9 +23,10 @@ export async function POST() {
     // Known Beds24 Room ID mapping (from Beds24 dashboard)
     // These are the Beds24 Room IDs that correspond to our rooms
     const mapping: Record<string, string> = {
-        'Glamping 1': '192518',
-        'Glamping 2': '274360',
-        'Glamping 3': '274361',
+        'Apartment (Triple) with Mountain View': '223647',
+        'Triple Room with Private Bathroom 2': '269838',   // Must be before "Triple Room with Private Bathroom" for correct matching
+        'Triple Room with Private Bathroom': '223648',
+        'Caravan': '507521',
     };
 
     const results: Array<{ room: string; status: string; externalId?: string }> = [];
