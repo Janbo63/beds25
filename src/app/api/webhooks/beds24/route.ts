@@ -5,25 +5,27 @@ import { addDays } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
-// In-memory log of recent webhook attempts (survives until next deploy)
-const webhookLogs: Array<{
-    timestamp: string;
-    contentType: string | null;
-    rawBody: string;
-    parsedPayload: any;
-    result: string;
-    error?: string;
-}> = [];
-
 /**
- * GET: Health check + show recent webhook logs for debugging
+ * GET: Health check + show recent webhook logs from database
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+    const { searchParams } = new URL(request.url);
+    const showLogs = searchParams.get('logs') === 'true';
+
+    if (showLogs) {
+        const logs = await prisma.webhookLog.findMany({
+            where: { source: 'BEDS24', direction: 'INCOMING' },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+        });
+        return NextResponse.json({ logs });
+    }
+
     return NextResponse.json({
         status: 'ok',
         endpoint: 'beds24-webhook',
         timestamp: new Date().toISOString(),
-        recentLogs: webhookLogs.slice(-10)
+        hint: 'Add ?logs=true to see recent webhook logs'
     });
 }
 
@@ -69,49 +71,34 @@ function parseBody(rawBody: string): Record<string, any> | null {
     return null;
 }
 
-/**
- * Polish month names to month numbers (0-indexed)
- */
+/** Polish month names to month numbers (0-indexed) */
 const POLISH_MONTHS: Record<string, number> = {
     'stycznia': 0, 'lutego': 1, 'marca': 2, 'kwietnia': 3, 'maja': 4, 'czerwca': 5,
     'lipca': 6, 'sierpnia': 7, 'września': 8, 'października': 9, 'listopada': 10, 'grudnia': 11,
-    // Handle encoding issues (ź→Å¼, etc)
     'wrzesnia': 8, 'pazdziernika': 9,
 };
 
-/**
- * Parse a date that might be in ISO format, or in Polish locale format like:
- * "poniedziałek, 23 lutego, 2026"  or  "2026-02-23"
- */
+/** Parse date in ISO, Polish locale, or European format */
 function parseFlexibleDate(dateStr: string): Date {
     if (!dateStr) throw new Error('Empty date string');
 
-    // 1. Try standard ISO/US parse
     const directParse = new Date(dateStr);
     if (!isNaN(directParse.getTime())) return directParse;
 
-    // 2. Try Polish locale: "dayName, DD monthName, YYYY" or "DD monthName YYYY"
-    // Remove day name prefix (everything before first comma + space)
+    // Polish locale: "dayName, DD monthName, YYYY"
     let cleaned = dateStr;
     const commaIdx = cleaned.indexOf(',');
-    if (commaIdx > 0) {
-        cleaned = cleaned.substring(commaIdx + 1).trim();
-    }
-    // Remove any remaining commas
+    if (commaIdx > 0) cleaned = cleaned.substring(commaIdx + 1).trim();
     cleaned = cleaned.replace(/,/g, '').trim();
 
-    // Try to match: DD monthName YYYY
     const parts = cleaned.split(/\s+/);
     if (parts.length >= 3) {
         const day = parseInt(parts[0]);
         const monthStr = parts[1].toLowerCase();
         const year = parseInt(parts[2]);
-
         if (!isNaN(day) && !isNaN(year)) {
-            // Try exact match first
             let month = POLISH_MONTHS[monthStr];
             if (month === undefined) {
-                // Try fuzzy match (handle encoding issues)
                 for (const [name, num] of Object.entries(POLISH_MONTHS)) {
                     if (monthStr.includes(name.substring(0, 4)) || name.includes(monthStr.substring(0, 4))) {
                         month = num;
@@ -119,13 +106,10 @@ function parseFlexibleDate(dateStr: string): Date {
                     }
                 }
             }
-            if (month !== undefined) {
-                return new Date(year, month, day);
-            }
+            if (month !== undefined) return new Date(year, month, day);
         }
     }
 
-    // 3. Try to extract any date-like pattern: YYYY-MM-DD or DD/MM/YYYY or DD.MM.YYYY
     const isoMatch = dateStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (isoMatch) return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
 
@@ -135,30 +119,43 @@ function parseFlexibleDate(dateStr: string): Date {
     throw new Error(`Cannot parse date: "${dateStr}"`);
 }
 
-/**
- * Parse price string that may include currency symbols and European comma format
- * e.g., "544,00zł" → 544.00, "1.250,00 EUR" → 1250.00
- */
+/** Parse price with currency symbols and European comma format */
 function parsePrice(priceStr: string): number {
     if (!priceStr) return 0;
-    // Remove all non-numeric chars except dots and commas
     let cleaned = priceStr.replace(/[^\d.,]/g, '');
-    // Handle European format: 1.250,00 → replace last comma with dot
     if (cleaned.includes(',')) {
-        // Remove thousand separators (dots before comma)
         const lastComma = cleaned.lastIndexOf(',');
         const beforeComma = cleaned.substring(0, lastComma).replace(/\./g, '');
-        const afterComma = cleaned.substring(lastComma + 1);
-        cleaned = `${beforeComma}.${afterComma}`;
+        cleaned = `${beforeComma}.${cleaned.substring(lastComma + 1)}`;
     }
     return parseFloat(cleaned) || 0;
 }
 
-/**
- * Check if a string is an unresolved template variable like [guestlastname]
- */
+/** Check if string is an unresolved template variable like [guestlastname] */
 function isUnresolved(value: string): boolean {
     return /^\[.+\]$/.test(value?.trim?.() || '');
+}
+
+/**
+ * Log a webhook event to the database (fire-and-forget, never throws)
+ */
+async function logWebhook(data: {
+    direction: string;
+    source: string;
+    event: string;
+    status: string;
+    bookingId?: string | null;
+    externalId?: string | null;
+    roomId?: string | null;
+    payload?: string | null;
+    error?: string | null;
+    metadata?: string | null;
+}) {
+    try {
+        await prisma.webhookLog.create({ data });
+    } catch (err: any) {
+        console.error('[WebhookLog] Failed to write log:', err?.message);
+    }
 }
 
 /**
@@ -176,11 +173,13 @@ export async function POST(request: NextRequest) {
         const payload = parseBody(rawBody);
 
         if (!payload) {
-            webhookLogs.push({ timestamp: new Date().toISOString(), contentType, rawBody: rawBody.substring(0, 1000), parsedPayload: null, result: 'PARSE_FAILED', error: 'Could not parse body' });
-            return NextResponse.json({ error: 'Could not parse body', rawPreview: rawBody.substring(0, 200) }, { status: 400 });
+            await logWebhook({
+                direction: 'INCOMING', source: 'BEDS24', event: 'PARSE_FAILED', status: 'ERROR',
+                payload: rawBody.substring(0, 2000),
+                error: 'Could not parse body in any known format'
+            });
+            return NextResponse.json({ error: 'Could not parse body' }, { status: 400 });
         }
-
-        console.log('[Webhook] Parsed payload:', JSON.stringify(payload, null, 2));
 
         const {
             bookId, roomId, status, firstNight, lastNight,
@@ -189,11 +188,15 @@ export async function POST(request: NextRequest) {
         } = payload;
 
         if (!bookId || !roomId) {
-            webhookLogs.push({ timestamp: new Date().toISOString(), contentType, rawBody: rawBody.substring(0, 1000), parsedPayload: payload, result: 'MISSING_FIELDS', error: `bookId=${bookId}, roomId=${roomId}` });
-            return NextResponse.json({ error: 'Missing bookId or roomId', parsed: payload }, { status: 400 });
+            await logWebhook({
+                direction: 'INCOMING', source: 'BEDS24', event: 'MISSING_FIELDS', status: 'ERROR',
+                payload: rawBody.substring(0, 2000),
+                error: `Missing required fields: bookId=${bookId}, roomId=${roomId}`
+            });
+            return NextResponse.json({ error: 'Missing bookId or roomId' }, { status: 400 });
         }
 
-        // Map Status (handle both numeric and text values)
+        // Map Status
         let mappedStatus = 'CONFIRMED';
         const statusLower = (status || '').toString().toLowerCase();
         if (statusLower === '0' || statusLower === 'cancelled') mappedStatus = 'CANCELLED';
@@ -202,10 +205,9 @@ export async function POST(request: NextRequest) {
         else if (statusLower === '3' || statusLower === 'request') mappedStatus = 'REQUEST';
         else if (statusLower === '4' || statusLower === 'black' || statusLower === 'blocked') mappedStatus = 'BLOCKED';
 
-        // Parse dates (handles Polish locale, ISO, and European formats)
+        // Parse dates
         const checkIn = parseFlexibleDate(firstNight);
         const checkOut = addDays(parseFlexibleDate(lastNight), 1);
-        console.log(`[Webhook] Parsed dates: checkIn=${checkIn.toISOString()}, checkOut=${checkOut.toISOString()}`);
 
         // Find Room
         const room = await prisma.room.findUnique({
@@ -213,18 +215,21 @@ export async function POST(request: NextRequest) {
         });
 
         if (!room) {
-            webhookLogs.push({ timestamp: new Date().toISOString(), contentType, rawBody: rawBody.substring(0, 1000), parsedPayload: payload, result: 'ROOM_NOT_FOUND', error: `externalId=${roomId}` });
+            await logWebhook({
+                direction: 'INCOMING', source: 'BEDS24', event: 'ROOM_NOT_FOUND', status: 'ERROR',
+                externalId: bookId.toString(), roomId: roomId.toString(),
+                payload: rawBody.substring(0, 2000),
+                error: `Room with externalId=${roomId} not found in database`
+            });
             return NextResponse.json({ error: `Room ${roomId} not found` }, { status: 404 });
         }
-
-        console.log(`[Webhook] Matched room: ${room.name} (${room.id})`);
 
         // Check existing booking
         const existingBooking = await prisma.booking.findFirst({
             where: { externalId: bookId.toString() }
         });
 
-        // Clean guest name (handle unresolved template variables)
+        // Clean guest data (handle unresolved template variables)
         const firstName = isUnresolved(guestFirstName) ? '' : (guestFirstName || '');
         const lastName = isUnresolved(guestLastName) ? '' : (guestLastName || '');
         const guestName = `${firstName} ${lastName}`.trim() || 'Guest';
@@ -248,20 +253,30 @@ export async function POST(request: NextRequest) {
             notes: `Imported via Webhook from ${cleanReferer || 'Beds24'}`
         };
 
+        const event = existingBooking ? 'BOOKING_UPDATE' : 'BOOKING_CREATE';
+
         if (existingBooking) {
-            console.log(`[Webhook] Updating existing booking ${existingBooking.id}`);
             await bookingService.update(existingBooking.id, bookingData);
         } else {
-            console.log(`[Webhook] Creating new booking from Beds24`);
             await bookingService.create(bookingData);
         }
 
-        webhookLogs.push({ timestamp: new Date().toISOString(), contentType, rawBody: rawBody.substring(0, 1000), parsedPayload: payload, result: existingBooking ? 'UPDATED' : 'CREATED' });
-        console.log('[Webhook] Successfully processed');
-        return NextResponse.json({ success: true, bookId, roomId, status: mappedStatus });
+        await logWebhook({
+            direction: 'INCOMING', source: 'BEDS24', event, status: 'SUCCESS',
+            externalId: bookId.toString(), roomId: room.id,
+            payload: rawBody.substring(0, 2000),
+            metadata: JSON.stringify({ guestName, checkIn: checkIn.toISOString(), checkOut: checkOut.toISOString(), mappedStatus, price: parsePrice(price) })
+        });
+
+        console.log(`[Webhook] Successfully ${event === 'BOOKING_CREATE' ? 'created' : 'updated'} booking`);
+        return NextResponse.json({ success: true, bookId, roomId, status: mappedStatus, action: event });
     } catch (error: any) {
-        webhookLogs.push({ timestamp: new Date().toISOString(), contentType, rawBody: rawBody.substring(0, 1000), parsedPayload: null, result: 'ERROR', error: error?.message || 'Unknown error' });
+        await logWebhook({
+            direction: 'INCOMING', source: 'BEDS24', event: 'PROCESSING_ERROR', status: 'ERROR',
+            payload: rawBody.substring(0, 2000),
+            error: error?.message || 'Unknown error'
+        });
         console.error('[Webhook] Error:', error?.message || error);
-        return NextResponse.json({ error: 'Internal Server Error', message: error?.message || 'Unknown error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error', message: error?.message }, { status: 500 });
     }
 }

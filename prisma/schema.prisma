@@ -232,3 +232,22 @@ model VoucherRedemption {
 
   @@unique([voucherId, bookingId])
 }
+
+model WebhookLog {
+  id          String   @id @default(cuid())
+  direction   String   // "INCOMING" (Beds24→Beds25), "OUTGOING" (Beds25→Beds24)
+  source      String   // "BEDS24", "ZOHO", "STRIPE", etc.
+  event       String   // "BOOKING_CREATE", "BOOKING_UPDATE", "BOOKING_CANCEL", "RATE_SYNC"
+  status      String   // "SUCCESS", "ERROR", "SKIPPED"
+  bookingId   String?  // Local booking ID if applicable
+  externalId  String?  // External booking/resource ID
+  roomId      String?  // Room involved
+  payload     String?  // Raw request/response body (JSON string)
+  error       String?  // Error message if failed
+  metadata    String?  // Additional context (JSON string)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([direction, status])
+  @@index([externalId])
+}
