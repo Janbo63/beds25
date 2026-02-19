@@ -31,6 +31,15 @@ export async function POST() {
 
     const results: Array<{ room: string; status: string; externalId?: string }> = [];
 
+    // Step 1: Clear ALL externalIds first to avoid unique constraint conflicts
+    const allDbIds = mapping.map(m => m.dbId);
+    await prisma.room.updateMany({
+        where: { id: { in: allDbIds } },
+        data: { externalId: null }
+    });
+
+    // Step 2: Set correct externalIds
+
     for (const { dbId, beds24Id, name } of mapping) {
         const room = await prisma.room.findUnique({ where: { id: dbId } });
 
