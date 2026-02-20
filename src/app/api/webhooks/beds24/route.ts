@@ -256,7 +256,24 @@ export async function POST(request: NextRequest) {
         const event = existingBooking ? 'BOOKING_UPDATE' : 'BOOKING_CREATE';
 
         if (existingBooking) {
-            await bookingService.update(existingBooking.id, bookingData);
+            // Update directly via Prisma — bookingService.update() routes through Zoho CRM
+            // which fails for webhook-created bookings that don't have Zoho IDs
+            await prisma.booking.update({
+                where: { id: existingBooking.id },
+                data: {
+                    roomId: room.id,
+                    guestName,
+                    guestEmail: cleanEmail,
+                    checkIn,
+                    checkOut,
+                    status: mappedStatus,
+                    source: cleanReferer || cleanApiSource || 'BEDS24',
+                    totalPrice: parsePrice(price),
+                    numAdults: parseInt(numAdult || '1') || 1,
+                    numChildren: parseInt(numChild || '0') || 0,
+                    notes: `Updated via Webhook from ${cleanReferer || 'Beds24'}`
+                }
+            });
         } else {
             await bookingService.create(bookingData);
         }
