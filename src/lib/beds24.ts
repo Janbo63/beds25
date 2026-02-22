@@ -32,6 +32,28 @@ export async function getBeds24Token(inviteCode: string) {
     return response.json(); // { refreshToken, token }
 }
 
+/**
+ * Get a short-lived access token using the stored refresh token.
+ * Use this for all API calls after initial setup.
+ */
+export async function getBeds24AccessToken(refreshToken: string): Promise<string> {
+    console.log('Getting Beds24 access token from refresh token...');
+    const response = await fetch(`${BEDS24_API_URL}/authentication/token`, {
+        method: 'GET',
+        headers: {
+            'refreshToken': refreshToken
+        }
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Beds24 Token Refresh Failed (${response.status}): ${errorText.substring(0, 100)}`);
+    }
+
+    const data = await response.json();
+    return data.token; // short-lived access token
+}
+
 export async function fetchBeds24Properties(accessToken: string) {
     const response = await fetch(`${BEDS24_API_URL}/properties?includeAllRooms=true`, {
         method: 'GET',
@@ -62,11 +84,22 @@ export async function fetchBeds24Bookings(accessToken: string) {
     return response.json();
 }
 
-export async function importBeds24Data(inviteCode: string) {
-    // 1. Get tokens
-    const auth = await getBeds24Token(inviteCode);
-    const accessToken = auth.token;
-    const refreshToken = auth.refreshToken;
+export async function importBeds24Data(inviteCode: string, existingRefreshToken?: string) {
+    let accessToken: string;
+    let refreshToken: string;
+
+    if (existingRefreshToken) {
+        // Use stored refresh token — standard path after initial setup
+        console.log('[Beds24Import] Using stored refresh token for auth...');
+        accessToken = await getBeds24AccessToken(existingRefreshToken);
+        refreshToken = existingRefreshToken;
+    } else {
+        // One-time invite code setup
+        console.log('[Beds24Import] Using invite code for initial setup...');
+        const auth = await getBeds24Token(inviteCode);
+        accessToken = auth.token;
+        refreshToken = auth.refreshToken;
+    }
 
     // 2. Fetch properties
     const propertiesData = await fetchBeds24Properties(accessToken);

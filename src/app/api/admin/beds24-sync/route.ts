@@ -113,8 +113,11 @@ export async function POST(request: NextRequest) {
             };
         }
 
-        // Step 2: Full import from Beds24
-        const importResult = await importBeds24Data(property.beds24InviteCode);
+        // Step 2: Full import from Beds24 (use refresh token if available, else fall back to invite code)
+        const importResult = await importBeds24Data(
+            property.beds24InviteCode,
+            property.beds24RefreshToken ?? undefined
+        );
         results.import = importResult;
 
         // Step 3: Count final state
