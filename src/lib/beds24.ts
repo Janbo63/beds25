@@ -70,22 +70,43 @@ export async function fetchBeds24Properties(accessToken: string) {
 }
 
 export async function fetchBeds24Bookings(accessToken: string) {
-    // Fetch bookings from 6 months ago up to 2 years from now to capture all active bookings
-    const startDate = format(new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
-    const endDate = format(new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+    // Use arrival date range: 1 year back to 2 years ahead to capture all active/recent bookings
+    const arrivalFrom = format(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+    const arrivalTo = format(new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+    // Also include currently in-house guests (departed in the past 30 days)
+    const departureFrom = format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
 
-    const response = await fetch(`${BEDS24_API_URL}/bookings?startDate=${startDate}&endDate=${endDate}`, {
-        method: 'GET',
-        headers: {
-            'token': accessToken
-        }
-    });
+    // Fetch two sets: by arrival range AND current in-house by departure range
+    const [byArrivalRes, byDepartureRes] = await Promise.all([
+        fetch(`${BEDS24_API_URL}/bookings?arrivalFrom=${arrivalFrom}&arrivalTo=${arrivalTo}`, {
+            headers: { 'token': accessToken }
+        }),
+        fetch(`${BEDS24_API_URL}/bookings?departureFrom=${departureFrom}`, {
+            headers: { 'token': accessToken }
+        }),
+    ]);
 
-    if (!response.ok) {
+    if (!byArrivalRes.ok) {
         throw new Error('Failed to fetch bookings from Beds24');
     }
 
-    return response.json();
+    const byArrivalData = await byArrivalRes.json();
+    const byDepartureData = byDepartureRes.ok ? await byDepartureRes.json() : { data: [] };
+
+    const byArrival: any[] = Array.isArray(byArrivalData) ? byArrivalData : (byArrivalData.data || []);
+    const byDeparture: any[] = Array.isArray(byDepartureData) ? byDepartureData : (byDepartureData.data || []);
+
+    // Merge and deduplicate by booking ID
+    const allBookings = [...byArrival];
+    const seenIds = new Set(allBookings.map((b: any) => b.id?.toString()));
+    for (const b of byDeparture) {
+        if (!seenIds.has(b.id?.toString())) {
+            allBookings.push(b);
+        }
+    }
+
+    console.log(`[Beds24] Fetched ${byArrival.length} by arrival + ${byDeparture.length} by departure = ${allBookings.length} total`);
+    return allBookings;
 }
 
 export async function importBeds24Data(inviteCode: string, existingRefreshToken?: string) {
@@ -174,8 +195,7 @@ export async function importBeds24Data(inviteCode: string, existingRefreshToken?
     }
 
     // 4. Fetch and Save Bookings
-    const bookingsData = await fetchBeds24Bookings(accessToken);
-    const bookings = Array.isArray(bookingsData) ? bookingsData : (bookingsData.data || []);
+    const bookings: any[] = await fetchBeds24Bookings(accessToken);
 
     const mapStatus = (s: any) => {
         const strStatus = s?.toString();
