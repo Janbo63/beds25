@@ -70,7 +70,11 @@ export async function fetchBeds24Properties(accessToken: string) {
 }
 
 export async function fetchBeds24Bookings(accessToken: string) {
-    const response = await fetch(`${BEDS24_API_URL}/bookings`, {
+    // Fetch bookings from 6 months ago up to 2 years from now to capture all active bookings
+    const startDate = format(new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+    const endDate = format(new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
+
+    const response = await fetch(`${BEDS24_API_URL}/bookings?startDate=${startDate}&endDate=${endDate}`, {
         method: 'GET',
         headers: {
             'token': accessToken
