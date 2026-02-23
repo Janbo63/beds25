@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { addDays, format } from 'date-fns';
+import { useTranslations } from 'next-intl';
 
 interface NewBookingModalProps {
     isOpen: boolean;
@@ -15,6 +16,7 @@ interface NewBookingModalProps {
 }
 
 export default function NewBookingModal({ isOpen, onClose, onSuccess, initialData }: NewBookingModalProps) {
+    const t = useTranslations('NewBookingModal');
     const [rooms, setRooms] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -144,7 +146,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
         // Get selected room for validation
         const selectedRoom = rooms.find(r => r.id === formData.roomId);
         if (!selectedRoom) {
-            setError('Please select a room');
+            setError(t('errorSelectRoom'));
             setLoading(false);
             return;
         }
@@ -153,19 +155,19 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
         const totalGuests = formData.numAdults + formData.numChildren;
 
         if (formData.numAdults > selectedRoom.maxAdults) {
-            setError(`This room allows a maximum of ${selectedRoom.maxAdults} adults`);
+            setError(t('errorMaxAdults', { max: selectedRoom.maxAdults }));
             setLoading(false);
             return;
         }
 
         if (totalGuests > selectedRoom.capacity) {
-            setError(`This room has a maximum capacity of ${selectedRoom.capacity} guests`);
+            setError(t('errorCapacity', { max: selectedRoom.capacity }));
             setLoading(false);
             return;
         }
 
         if (diffDays < selectedRoom.minNights) {
-            setError(`Minimum stay is ${selectedRoom.minNights} night${selectedRoom.minNights > 1 ? 's' : ''}`);
+            setError(t('errorMinNights', { min: selectedRoom.minNights }));
             setLoading(false);
             return;
         }
@@ -193,7 +195,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
             }
         } catch (error) {
             console.error('Booking failed', error);
-            setError('Failed to create booking. Please try again.');
+            setError(t('errorGeneric'));
         } finally {
             setLoading(false);
         }
@@ -204,7 +206,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
             <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-8 rounded-3xl w-full max-w-xl shadow-2xl relative">
                 <button onClick={onClose} className="absolute top-6 right-6 text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-white transition-colors">✕</button>
 
-                <h2 className="text-2xl font-bold mb-8">Manual Booking Entry</h2>
+                <h2 className="text-2xl font-bold mb-8 text-neutral-900 dark:text-white">{t('title')}</h2>
 
                 {error && (
                     <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
@@ -215,7 +217,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-[10px] uppercase text-neutral-500 font-bold">Select Room</label>
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('selectRoom')}</label>
                             <select
                                 required
                                 className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
@@ -225,16 +227,16 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                                     setFormData({ ...formData, roomId: e.target.value, roomNumber: room?.number || '' });
                                 }}
                             >
-                                <option value="">Select Accommodation</option>
+                                <option value="">{t('selectAccommodation')}</option>
                                 {rooms.map(room => (
                                     <option key={room.id} value={room.id}>{room.number} ({room.name})</option>
                                 ))}
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] uppercase text-neutral-500 font-bold">Base Price (zł)</label>
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('basePrice')}</label>
                             <div className="w-full bg-neutral-100 dark:bg-neutral-950/50 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 text-neutral-500 dark:text-neutral-400">
-                                {rooms.find(r => r.id === formData.roomId)?.basePrice || '0'} zł / night
+                                {rooms.find(r => r.id === formData.roomId)?.basePrice || '0'} {t('perNight')}
                             </div>
                         </div>
                     </div>
@@ -244,10 +246,10 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                         if (room) {
                             return (
                                 <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3">
-                                    <div className="text-[10px] uppercase text-blue-400 font-bold mb-1">Room Constraints</div>
-                                    <div className="text-xs text-neutral-300 space-y-0.5">
-                                        <div>Max {room.maxAdults} adults • Capacity {room.capacity} guests</div>
-                                        <div>Minimum stay: {room.minNights} night{room.minNights > 1 ? 's' : ''}</div>
+                                    <div className="text-[10px] uppercase text-blue-400 font-bold mb-1">{t('roomConstraints')}</div>
+                                    <div className="text-xs text-neutral-600 dark:text-neutral-300 space-y-0.5">
+                                        <div>{t('maxAdultsInfo', { max: room.maxAdults })} • {t('capacityInfo', { max: room.capacity })}</div>
+                                        <div>{t('minStayInfo', { min: room.minNights })}</div>
                                     </div>
                                 </div>
                             );
@@ -256,7 +258,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                     })()}
 
                     <div className="space-y-2">
-                        <label className="text-[10px] uppercase text-neutral-500 font-bold">Guest Name</label>
+                        <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('guestName')}</label>
                         <input
                             required
                             type="text"
@@ -268,7 +270,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-[10px] uppercase text-neutral-500 font-bold">Adults</label>
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('adults')}</label>
                             <input
                                 required
                                 type="number"
@@ -283,7 +285,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] uppercase text-neutral-500 font-bold">Children</label>
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('children')}</label>
                             <input
                                 required
                                 type="number"
@@ -301,7 +303,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
 
                     {formData.numChildren > 0 && (
                         <div className="space-y-2">
-                            <label className="text-[10px] uppercase text-neutral-500 font-bold">Children's Ages</label>
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('childrenAges')}</label>
                             <div className="grid grid-cols-4 gap-2">
                                 {Array.from({ length: formData.numChildren }).map((_, idx) => (
                                     <input
@@ -309,7 +311,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                                         type="number"
                                         min="0"
                                         max="17"
-                                        placeholder={`Child ${idx + 1}`}
+                                        placeholder={`${t('child')} ${idx + 1}`}
                                         className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-sm"
                                         value={formData.guestAges[idx] || ''}
                                         onChange={e => {
@@ -325,7 +327,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-[10px] uppercase text-neutral-500 font-bold">Check-In</label>
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('checkIn')}</label>
                             <input
                                 required
                                 type="date"
@@ -335,7 +337,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             />
                         </div>
                         <div className="space-y-2 relative">
-                            <label className="text-[10px] uppercase text-neutral-500 font-bold">Check-Out</label>
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('checkOut')}</label>
                             <input
                                 required
                                 type="date"
@@ -346,7 +348,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             />
                             {formData.checkIn && formData.checkOut && (
                                 <div className="absolute -bottom-6 left-0 text-[10px] font-bold text-hotel-gold uppercase tracking-tighter">
-                                    Duration: {Math.ceil(Math.abs(new Date(formData.checkOut).getTime() - new Date(formData.checkIn).getTime()) / (1000 * 60 * 60 * 24))} nights
+                                    {t('duration')}: {Math.ceil(Math.abs(new Date(formData.checkOut).getTime() - new Date(formData.checkIn).getTime()) / (1000 * 60 * 60 * 24))} {t('nights')}
                                 </div>
                             )}
                         </div>
@@ -354,7 +356,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-[10px] uppercase text-neutral-500 font-bold">Total Price (zł)</label>
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('totalPrice')}</label>
                             <input
                                 required
                                 type="number"
@@ -364,24 +366,24 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] uppercase text-neutral-500 font-bold">Status</label>
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('status')}</label>
                             <select
                                 className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
                                 value={formData.status}
                                 onChange={e => setFormData({ ...formData, status: e.target.value })}
                             >
-                                <option value="CONFIRMED">Confirmed</option>
-                                <option value="REQUEST">Request</option>
-                                <option value="BLOCKED">Blocked</option>
+                                <option value="CONFIRMED">{t('statusConfirmed')}</option>
+                                <option value="REQUEST">{t('statusRequest')}</option>
+                                <option value="BLOCKED">{t('statusBlocked')}</option>
                             </select>
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] uppercase text-neutral-500 font-bold">Special Requests / Notes</label>
+                        <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('notes')}</label>
                         <textarea
-                            className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold min-h-[80px] resize-none"
-                            placeholder="Dietary requirements, early check-in, parking..." value={formData.notes}
+                            className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold min-h-[80px] resize-none text-neutral-900 dark:text-white"
+                            placeholder={t('notesPlaceholder')} value={formData.notes}
                             onChange={e => setFormData({ ...formData, notes: e.target.value })}
                         />
                     </div>
@@ -391,7 +393,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                         disabled={loading}
                         className="w-full bg-hotel-gold text-black font-bold py-4 rounded-xl hover:bg-yellow-500 transition-all shadow-lg shadow-hotel-gold/10"
                     >
-                        {loading ? 'Creating...' : 'Create Booking'}
+                        {loading ? t('creating') : t('createBooking')}
                     </button>
                 </form>
             </div>
