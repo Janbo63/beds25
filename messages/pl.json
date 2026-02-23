@@ -178,6 +178,17 @@
         "errorMinNights": "Minimalny pobyt wynosi {min} noc(y)",
         "errorGeneric": "Nie udało się utworzyć rezerwacji. Spróbuj ponownie."
     },
+    "Rates": {
+        "title": "Dzienna Zajętość",
+        "titleHighlight": "Ceny",
+        "subtitle": "Ustaw i synchronizuj dynamiczne ceny z kanałami zewnętrznymi.",
+        "pricingGrid": "Siatka cenowa",
+        "loading": "Ładowanie cen...",
+        "accommodation": "Zakwaterowanie",
+        "base": "Baza",
+        "save": "Zapisz",
+        "manual": "Ręcznie"
+    },
     "Common": {
         "loading": "Ładowanie...",
         "error": "Wystąpił błąd",

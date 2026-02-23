@@ -178,6 +178,17 @@
         "errorMinNights": "Minimum stay is {min} night(s)",
         "errorGeneric": "Failed to create booking. Please try again."
     },
+    "Rates": {
+        "title": "Daily Occupancy",
+        "titleHighlight": "Rates",
+        "subtitle": "Set and synchronize dynamic pricing with external channels.",
+        "pricingGrid": "Pricing Grid",
+        "loading": "Loading rates...",
+        "accommodation": "Accommodation",
+        "base": "Base",
+        "save": "Save",
+        "manual": "Manual"
+    },
     "Common": {
         "loading": "Loading...",
         "error": "An error occurred",
