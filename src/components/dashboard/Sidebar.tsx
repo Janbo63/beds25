@@ -3,15 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
     Calendar,
     BarChart3,
     Settings,
-    Banknote,
     ChevronRight,
-    LayoutDashboard,
-    ChevronLeft,
-    Menu
+    ChevronLeft
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, href, active, collapsed }: { icon: any, label: string, href: string, active: boolean, collapsed: boolean }) => (
@@ -44,10 +42,12 @@ export default function Sidebar() {
         setMounted(true);
     }, []);
 
+    const t = useTranslations('Sidebar');
+
     const menuItems = [
-        { icon: Calendar, label: 'Tape Chart & Rates', href: '/dashboard' },
-        { icon: BarChart3, label: 'Financial Reports', href: '/dashboard/reports' },
-        { icon: Settings, label: 'Management', href: '/dashboard/settings' },
+        { icon: Calendar, label: t('tapeChart'), href: '/dashboard' },
+        { icon: BarChart3, label: t('reports'), href: '/dashboard/reports' },
+        { icon: Settings, label: t('settings'), href: '/dashboard/settings' },
     ];
 
     if (!mounted) return (
@@ -84,7 +84,7 @@ export default function Sidebar() {
             <nav className="flex-1 space-y-2">
                 {!isCollapsed && (
                     <div className="px-3 mb-2 animate-in fade-in duration-300">
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-400 dark:text-neutral-600">Navigation</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-400 dark:text-neutral-600">{t('navigation')}</span>
                     </div>
                 )}
                 {menuItems.map((item) => (
@@ -102,14 +102,14 @@ export default function Sidebar() {
             <div className={`mt-auto pt-6 border-t border-neutral-200 dark:border-white/5 ${isCollapsed ? 'flex justify-center' : ''}`}>
                 {!isCollapsed ? (
                     <div className="bg-gradient-to-br from-hotel-gold/10 to-transparent p-4 rounded-2xl border border-hotel-gold/10 animate-in fade-in duration-500">
-                        <div className="text-[10px] font-black uppercase tracking-[0.1em] text-hotel-gold mb-1">Status</div>
+                        <div className="text-[10px] font-black uppercase tracking-[0.1em] text-hotel-gold mb-1">{t('status')}</div>
                         <div className="flex items-center gap-2 text-xs font-bold text-neutral-700 dark:text-white">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            Channels Live
+                            {t('channelsLive')}
                         </div>
                     </div>
                 ) : (
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mb-4" title="System Online"></div>
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mb-4" title={t('systemOnline')}></div>
                 )}
             </div>
 

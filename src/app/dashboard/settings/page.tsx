@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import MediaGallery from '@/components/dashboard/MediaGallery';
 
 export default function AdminSettings() {
+    const t = useTranslations('Settings');
     const [rooms, setRooms] = useState<any[]>([]);
     const [propertyId, setPropertyId] = useState<string>('');
     const [loading, setLoading] = useState(true);
@@ -41,7 +43,6 @@ export default function AdminSettings() {
                 if (data.length > 0 && !propertyId) {
                     const firstRoom = data[0];
                     setPropertyId(firstRoom.propertyId);
-                    // Property details will be fetched separately or from the first room
                 }
                 setLoading(false);
             });
@@ -72,7 +73,7 @@ export default function AdminSettings() {
             });
             const data = await res.json();
             if (res.ok) {
-                setImportStatus({ message: 'Data imported successfully! Refreshing...', type: 'success' });
+                setImportStatus({ message: t('importSuccess'), type: 'success' });
                 setTimeout(() => window.location.reload(), 2000);
             } else {
                 setImportStatus({ message: data.error || 'Import failed', type: 'error' });
@@ -101,11 +102,10 @@ export default function AdminSettings() {
     };
 
     const handleDeleteRoom = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this room/unit?')) return;
+        if (!confirm(t('deleteRoomConfirm'))) return;
         try {
             const res = await fetch(`/api/admin/rooms?id=${id}`, { method: 'DELETE' });
             if (res.ok) {
-                // Refresh data
                 fetch('/api/admin/rooms')
                     .then(res => res.json())
                     .then(data => setRooms(data));
@@ -121,7 +121,6 @@ export default function AdminSettings() {
             body: JSON.stringify({ roomId, channel, multiplier }),
             headers: { 'Content-Type': 'application/json' }
         });
-        // Refresh local data
         fetch('/api/admin/rooms')
             .then(res => res.json())
             .then(data => setRooms(data));
@@ -134,7 +133,6 @@ export default function AdminSettings() {
             headers: { 'Content-Type': 'application/json' }
         });
         if (res.ok) {
-            // Refresh local data
             fetch('/api/admin/rooms')
                 .then(res => res.json())
                 .then(data => setRooms(data));
@@ -154,7 +152,6 @@ export default function AdminSettings() {
                     message: `Synced: ${JSON.stringify(data.synced)}`,
                     type: 'success'
                 });
-                // Refresh local data
                 if (entity === 'all' || entity === 'rooms') {
                     fetch('/api/admin/rooms')
                         .then(res => res.json())
@@ -183,7 +180,6 @@ export default function AdminSettings() {
                 body: formData
             });
             if (res.ok) {
-                // Refresh data
                 fetch('/api/admin/rooms')
                     .then(res => res.json())
                     .then(data => setRooms(data));
@@ -195,6 +191,10 @@ export default function AdminSettings() {
         }
     };
 
+    // Input / card shared styles — light and dark paired
+    const inputClass = "w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 rounded-lg p-3 outline-none text-neutral-900 dark:text-white focus:border-hotel-gold transition-colors";
+    const cardClass = "p-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl space-y-4";
+    const smallInputClass = "w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded p-2 text-sm font-bold text-neutral-900 dark:text-white";
 
     if (loading) return <div className="p-8 text-neutral-400">Loading...</div>;
 
@@ -202,27 +202,27 @@ export default function AdminSettings() {
         <div className="p-8 space-y-8 animate-in fade-in duration-700">
             <header className="flex flex-col sm:flex-row justify-between items-center gap-6">
                 <div>
-                    <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-white to-neutral-500 bg-clip-text text-transparent">
-                        Global <span className="text-hotel-gold">Settings</span>
+                    <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-neutral-800 to-neutral-500 dark:from-white dark:to-neutral-400 bg-clip-text text-transparent">
+                        {t('title')} <span className="text-hotel-gold">{t('titleHighlight')}</span>
                     </h1>
-                    <p className="text-neutral-500 mt-2 font-medium">Configure property parameters and channel synchronization.</p>
+                    <p className="text-neutral-500 mt-2 font-medium">{t('subtitle')}</p>
                 </div>
             </header>
 
             {/* Tab Navigation */}
-            <div className="flex flex-wrap gap-2 p-1 bg-neutral-900/50 border border-neutral-800 rounded-xl mb-12 backdrop-blur-md">
+            <div className="flex flex-wrap gap-2 p-1 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl mb-12 backdrop-blur-md">
                 {[
-                    { id: 'general', label: 'General', icon: '🏨' },
-                    { id: 'units', label: 'Rooms & Sync', icon: '📡' },
-                    { id: 'zoho', label: 'Zoho CRM', icon: '🔄' },
-                    { id: 'migration', label: 'Migration', icon: '⚡' }
+                    { id: 'general', label: t('tabGeneral'), icon: '🏨' },
+                    { id: 'units', label: t('tabUnits'), icon: '📡' },
+                    { id: 'zoho', label: t('tabZoho'), icon: '🔄' },
+                    { id: 'migration', label: t('tabMigration'), icon: '⚡' }
                 ].map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
                         className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${activeTab === tab.id
                             ? 'bg-hotel-gold text-black shadow-lg shadow-hotel-gold/20 scale-105'
-                            : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                            : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-white/5'
                             }`}
                     >
                         <span>{tab.icon}</span>
@@ -233,33 +233,33 @@ export default function AdminSettings() {
 
             <div className="space-y-12">
                 {activeTab === 'general' && (
-                    <section className="glass p-8 rounded-3xl border-white/5 bg-white/5 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                    <section className="glass p-8 rounded-3xl border border-neutral-200 dark:border-white/5 bg-white/80 dark:bg-white/5 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
                             <span className="w-2 h-6 bg-hotel-gold rounded-full"></span>
-                            External Global IDs
+                            {t('externalIds')}
                         </h2>
                         <form onSubmit={handleUpdateProperty} className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
-                                <label className="block text-xs uppercase tracking-widest text-neutral-500 mb-2 font-bold">Booking.com Property ID (Bhid)</label>
+                                <label className="block text-xs uppercase tracking-widest text-neutral-500 mb-2 font-bold">{t('bookingComId')}</label>
                                 <input
                                     type="text"
-                                    className="w-full bg-neutral-900 border border-neutral-800 rounded-lg p-3 outline-none focus:border-blue-500 transition-colors"
+                                    className={inputClass}
                                     value={propertyDetails.bookingComId}
                                     onChange={e => setPropertyDetails({ ...propertyDetails, bookingComId: e.target.value })}
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs uppercase tracking-widest text-neutral-500 mb-2 font-bold">Airbnb Property ID</label>
+                                <label className="block text-xs uppercase tracking-widest text-neutral-500 mb-2 font-bold">{t('airbnbId')}</label>
                                 <input
                                     type="text"
-                                    className="w-full bg-neutral-900 border border-neutral-800 rounded-lg p-3 outline-none focus:border-rose-500 transition-colors"
+                                    className={inputClass}
                                     value={propertyDetails.airbnbId}
                                     onChange={e => setPropertyDetails({ ...propertyDetails, airbnbId: e.target.value })}
                                 />
                             </div>
                             <div className="flex items-end">
                                 <button className="w-full bg-hotel-gold text-black p-3 rounded-lg font-bold hover:bg-yellow-500 transition-all">
-                                    Update Global Settings
+                                    {t('updateSettings')}
                                 </button>
                             </div>
                         </form>
@@ -269,47 +269,47 @@ export default function AdminSettings() {
 
                 {activeTab === 'units' && (
                     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <section className="glass p-8 rounded-3xl bg-blue-500/5 border-blue-500/10 shadow-2xl">
-                            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                        <section className="glass p-8 rounded-3xl bg-blue-500/5 border border-blue-500/10 shadow-2xl">
+                            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
                                 <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
-                                Register New Room
+                                {t('registerRoom')}
                             </h2>
                             <form onSubmit={handleAddRoom} className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-6">
                                     <input
                                         type="text"
-                                        placeholder="Room Number (e.g. 101)"
-                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-4 outline-none focus:border-hotel-gold transition-colors"
+                                        placeholder={t('roomNumber')}
+                                        className={inputClass + " rounded-xl p-4"}
                                         value={newRoom.number}
                                         onChange={e => setNewRoom({ ...newRoom, number: e.target.value })}
                                         required
                                     />
                                     <input
                                         type="text"
-                                        placeholder="Internal Name (e.g. Deluxe Suite)"
-                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-4 outline-none focus:border-hotel-gold transition-colors"
+                                        placeholder={t('internalName')}
+                                        className={inputClass + " rounded-xl p-4"}
                                         value={newRoom.name}
                                         onChange={e => setNewRoom({ ...newRoom, name: e.target.value })}
                                         required
                                     />
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] uppercase text-neutral-500 font-bold ml-1">Base Price (zł)</label>
+                                            <label className="text-[10px] uppercase text-neutral-500 font-bold ml-1">{t('basePrice')}</label>
                                             <input
                                                 type="number"
                                                 placeholder="e.g. 450"
-                                                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-4 outline-none focus:border-hotel-gold transition-colors"
+                                                className={inputClass + " rounded-xl p-4"}
                                                 value={newRoom.basePrice}
                                                 onChange={e => setNewRoom({ ...newRoom, basePrice: e.target.value })}
                                                 required
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] uppercase text-neutral-500 font-bold ml-1">Total Capacity</label>
+                                            <label className="text-[10px] uppercase text-neutral-500 font-bold ml-1">{t('totalCapacity')}</label>
                                             <input
                                                 type="number"
                                                 placeholder="e.g. 4"
-                                                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-4 outline-none focus:border-hotel-gold transition-colors"
+                                                className={inputClass + " rounded-xl p-4"}
                                                 value={newRoom.capacity}
                                                 onChange={e => setNewRoom({ ...newRoom, capacity: e.target.value })}
                                                 required
@@ -318,30 +318,30 @@ export default function AdminSettings() {
                                     </div>
                                     <div className="grid grid-cols-3 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] uppercase text-neutral-500 font-bold ml-1">Max Adults</label>
+                                            <label className="text-[10px] uppercase text-neutral-500 font-bold ml-1">{t('maxAdults')}</label>
                                             <input
                                                 type="number"
-                                                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-4 outline-none focus:border-hotel-gold transition-colors"
+                                                className={inputClass + " rounded-xl p-4"}
                                                 value={newRoom.maxAdults}
                                                 onChange={e => setNewRoom({ ...newRoom, maxAdults: e.target.value })}
                                                 required
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] uppercase text-neutral-500 font-bold ml-1">Max Children</label>
+                                            <label className="text-[10px] uppercase text-neutral-500 font-bold ml-1">{t('maxChildren')}</label>
                                             <input
                                                 type="number"
-                                                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-4 outline-none focus:border-hotel-gold transition-colors"
+                                                className={inputClass + " rounded-xl p-4"}
                                                 value={newRoom.maxChildren}
                                                 onChange={e => setNewRoom({ ...newRoom, maxChildren: e.target.value })}
                                                 required
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] uppercase text-neutral-500 font-bold ml-1">Min Nights</label>
+                                            <label className="text-[10px] uppercase text-neutral-500 font-bold ml-1">{t('minNights')}</label>
                                             <input
                                                 type="number"
-                                                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-4 outline-none focus:border-hotel-gold transition-colors"
+                                                className={inputClass + " rounded-xl p-4"}
                                                 value={newRoom.minNights}
                                                 onChange={e => setNewRoom({ ...newRoom, minNights: e.target.value })}
                                                 required
@@ -352,50 +352,50 @@ export default function AdminSettings() {
                                 <div className="space-y-4">
                                     <input
                                         type="url"
-                                        placeholder="Airbnb iCal URL"
-                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-4 outline-none focus:border-rose-500/50 transition-colors"
+                                        placeholder={t('airbnbIcal')}
+                                        className={inputClass + " rounded-xl p-4"}
                                         value={newRoom.airbnbUrl}
                                         onChange={e => setNewRoom({ ...newRoom, airbnbUrl: e.target.value })}
                                     />
                                     <input
                                         type="url"
-                                        placeholder="Booking.com iCal URL"
-                                        className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-4 outline-none focus:border-blue-500/50 transition-colors"
+                                        placeholder={t('bookingComIcal')}
+                                        className={inputClass + " rounded-xl p-4"}
                                         value={newRoom.bookingUrl}
                                         onChange={e => setNewRoom({ ...newRoom, bookingUrl: e.target.value })}
                                     />
-                                    <button className="w-full bg-blue-600 hover:bg-blue-500 p-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-500/20 active:scale-95">
-                                        Add Room
+                                    <button className="w-full bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-xl font-bold transition-all shadow-xl shadow-blue-500/20 active:scale-95">
+                                        {t('addRoom')}
                                     </button>
                                 </div>
                             </form>
                         </section>
 
-                        <section className="glass p-8 rounded-3xl border-white/5 bg-white/5 shadow-2xl">
-                            <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                        <section className="glass p-8 rounded-3xl border border-neutral-200 dark:border-white/5 bg-white/80 dark:bg-white/5 shadow-2xl">
+                            <h3 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
                                 <span className="w-2 h-6 bg-hotel-gold rounded-full"></span>
-                                Managing Rooms & Media
+                                {t('manageRooms')}
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {rooms.map((room: any) => (
-                                    <div key={room.id} className="p-6 bg-neutral-900 border border-neutral-800 rounded-2xl space-y-4">
+                                    <div key={room.id} className={cardClass}>
                                         <div className="flex justify-between items-start">
                                             <div className="space-y-4 flex-1">
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
-                                                        <label className="text-[9px] text-neutral-600 uppercase font-bold">Room #</label>
+                                                        <label className="text-[9px] text-neutral-500 dark:text-neutral-600 uppercase font-bold">{t('roomHash')}</label>
                                                         <input
                                                             type="text"
-                                                            className="w-full bg-neutral-950 border border-neutral-800 rounded p-2 text-sm font-bold"
+                                                            className={smallInputClass}
                                                             defaultValue={room.number}
                                                             onBlur={(e) => handleUpdateRoom(room.id, { number: e.target.value })}
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="text-[9px] text-neutral-600 uppercase font-bold">Base price (zł)</label>
+                                                        <label className="text-[9px] text-neutral-500 dark:text-neutral-600 uppercase font-bold">{t('basePrice')}</label>
                                                         <input
                                                             type="number"
-                                                            className="w-full bg-neutral-950 border border-neutral-800 rounded p-2 text-sm font-bold text-hotel-gold"
+                                                            className={smallInputClass + " text-hotel-gold"}
                                                             defaultValue={room.basePrice}
                                                             onBlur={(e) => handleUpdateRoom(room.id, { basePrice: parseFloat(e.target.value) })}
                                                         />
@@ -404,37 +404,37 @@ export default function AdminSettings() {
 
                                                 <div className="grid grid-cols-4 gap-2">
                                                     <div>
-                                                        <label className="text-[9px] text-neutral-600 uppercase font-bold">Adults</label>
+                                                        <label className="text-[9px] text-neutral-500 dark:text-neutral-600 uppercase font-bold">{t('adults')}</label>
                                                         <input
                                                             type="number"
-                                                            className="w-full bg-neutral-950 border border-neutral-800 rounded p-1.5 text-xs text-neutral-300"
+                                                            className={smallInputClass + " text-xs text-neutral-700 dark:text-neutral-300"}
                                                             defaultValue={room.maxAdults}
                                                             onBlur={(e) => handleUpdateRoom(room.id, { maxAdults: parseInt(e.target.value) })}
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="text-[9px] text-neutral-600 uppercase font-bold">Children</label>
+                                                        <label className="text-[9px] text-neutral-500 dark:text-neutral-600 uppercase font-bold">{t('children')}</label>
                                                         <input
                                                             type="number"
-                                                            className="w-full bg-neutral-950 border border-neutral-800 rounded p-1.5 text-xs text-neutral-300"
+                                                            className={smallInputClass + " text-xs text-neutral-700 dark:text-neutral-300"}
                                                             defaultValue={room.maxChildren}
                                                             onBlur={(e) => handleUpdateRoom(room.id, { maxChildren: parseInt(e.target.value) })}
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="text-[9px] text-neutral-600 uppercase font-bold">Total</label>
+                                                        <label className="text-[9px] text-neutral-500 dark:text-neutral-600 uppercase font-bold">{t('total')}</label>
                                                         <input
                                                             type="number"
-                                                            className="w-full bg-neutral-950 border border-neutral-800 rounded p-1.5 text-xs text-neutral-300"
+                                                            className={smallInputClass + " text-xs text-neutral-700 dark:text-neutral-300"}
                                                             defaultValue={room.capacity}
                                                             onBlur={(e) => handleUpdateRoom(room.id, { capacity: parseInt(e.target.value) })}
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="text-[9px] text-neutral-600 uppercase font-bold">Stay</label>
+                                                        <label className="text-[9px] text-neutral-500 dark:text-neutral-600 uppercase font-bold">{t('minStay')}</label>
                                                         <input
                                                             type="number"
-                                                            className="w-full bg-neutral-950 border border-neutral-800 rounded p-1.5 text-xs text-neutral-300"
+                                                            className={smallInputClass + " text-xs text-neutral-700 dark:text-neutral-300"}
                                                             defaultValue={room.minNights}
                                                             onBlur={(e) => handleUpdateRoom(room.id, { minNights: parseInt(e.target.value) })}
                                                         />
@@ -443,13 +443,13 @@ export default function AdminSettings() {
                                             </div>
                                             <button
                                                 onClick={() => handleDeleteRoom(room.id)}
-                                                className="p-2 text-neutral-500 hover:text-red-500 transition-colors ml-4"
+                                                className="p-2 text-neutral-400 hover:text-red-500 transition-colors ml-4"
                                             >
                                                 🗑️
                                             </button>
                                         </div>
 
-                                        <div className="space-y-3 pt-3 border-t border-white/5">
+                                        <div className="space-y-3 pt-3 border-t border-neutral-200 dark:border-white/5">
                                             <MediaGallery
                                                 media={room.media || []}
                                                 roomId={room.id}
@@ -461,25 +461,25 @@ export default function AdminSettings() {
                                             />
                                         </div>
 
-                                        <div className="space-y-3 pt-3 border-t border-white/5">
-                                            <label className="text-[10px] uppercase text-neutral-500 font-bold tracking-widest">Markup Settings</label>
+                                        <div className="space-y-3 pt-3 border-t border-neutral-200 dark:border-white/5">
+                                            <label className="text-[10px] uppercase text-neutral-500 font-bold tracking-widest">{t('markupSettings')}</label>
                                             <div className="flex items-center gap-4">
                                                 <div className="flex-1">
-                                                    <div className="text-[9px] text-neutral-600 mb-1">Booking.com</div>
+                                                    <div className="text-[9px] text-neutral-500 mb-1">Booking.com</div>
                                                     <input
                                                         type="number"
                                                         step="0.01"
-                                                        className="w-full bg-neutral-950 border border-neutral-800 rounded p-2 text-xs"
+                                                        className={smallInputClass + " text-xs"}
                                                         defaultValue={room.channelSettings?.find((s: any) => s.channel === 'BOOKING.COM')?.multiplier || 1.15}
                                                         onBlur={(e) => handleUpdateMarkup(room.id, 'BOOKING.COM', parseFloat(e.target.value))}
                                                     />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <div className="text-[9px] text-neutral-600 mb-1">Airbnb</div>
+                                                    <div className="text-[9px] text-neutral-500 mb-1">Airbnb</div>
                                                     <input
                                                         type="number"
                                                         step="0.01"
-                                                        className="w-full bg-neutral-950 border border-neutral-800 rounded p-2 text-xs"
+                                                        className={smallInputClass + " text-xs"}
                                                         defaultValue={room.channelSettings?.find((s: any) => s.channel === 'AIRBNB')?.multiplier || 1.10}
                                                         onBlur={(e) => handleUpdateMarkup(room.id, 'AIRBNB', parseFloat(e.target.value))}
                                                     />
@@ -495,13 +495,13 @@ export default function AdminSettings() {
 
                 {activeTab === 'zoho' && (
                     <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <section className="glass p-8 rounded-3xl bg-purple-600/10 border-purple-500/20 shadow-2xl shadow-purple-900/10">
-                            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                        <section className="glass p-8 rounded-3xl bg-purple-600/10 border border-purple-500/20 shadow-2xl shadow-purple-900/10">
+                            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
                                 <span className="w-2 h-6 bg-purple-500 rounded-full"></span>
-                                Zoho CRM Synchronization
+                                {t('zohoTitle')}
                             </h2>
-                            <p className="text-sm text-neutral-400 mb-8 max-w-2xl leading-relaxed">
-                                Your booking system is now integrated with <strong>Zoho CRM</strong>. All bookings and room data are stored in Zoho CRM as the source of truth, with a local cache for performance.
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-8 max-w-2xl leading-relaxed">
+                                {t('zohoDesc')}
                             </p>
 
                             <div className="space-y-6">
@@ -519,51 +519,51 @@ export default function AdminSettings() {
                                         onClick={() => handleZohoSync('all')}
                                         disabled={syncing}
                                         className={`px-6 py-4 rounded-xl font-bold transition-all shadow-lg ${syncing
-                                            ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
+                                            ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'
                                             : 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-500/20 active:scale-95'
                                             }`}
                                     >
-                                        {syncing ? '⏳ Syncing...' : '🔄 Sync All'}
+                                        {syncing ? `⏳ ${t('syncing')}` : `🔄 ${t('syncAll')}`}
                                     </button>
                                     <button
                                         onClick={() => handleZohoSync('bookings')}
                                         disabled={syncing}
                                         className={`px-6 py-4 rounded-xl font-bold transition-all shadow-lg ${syncing
-                                            ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
+                                            ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'
                                             : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 active:scale-95'
                                             }`}
                                     >
-                                        {syncing ? '⏳ Syncing...' : '📅 Sync Bookings'}
+                                        {syncing ? `⏳ ${t('syncing')}` : `📅 ${t('syncBookings')}`}
                                     </button>
                                     <button
                                         onClick={() => handleZohoSync('rooms')}
                                         disabled={syncing}
                                         className={`px-6 py-4 rounded-xl font-bold transition-all shadow-lg ${syncing
-                                            ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
+                                            ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'
                                             : 'bg-green-600 hover:bg-green-500 text-white shadow-green-500/20 active:scale-95'
                                             }`}
                                     >
-                                        {syncing ? '⏳ Syncing...' : '🏠 Sync Rooms'}
+                                        {syncing ? `⏳ ${t('syncing')}` : `🏠 ${t('syncRooms')}`}
                                     </button>
                                 </div>
 
                                 {/* Info Cards */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                                    <div className="p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl">
-                                        <h3 className="text-sm font-bold text-purple-400 mb-2">✅ Write Strategy</h3>
-                                        <p className="text-xs text-neutral-400">All booking and room changes are written to Zoho CRM first, then synced to your local database.</p>
+                                    <div className="p-4 bg-white/60 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                                        <h3 className="text-sm font-bold text-purple-500 dark:text-purple-400 mb-2">✅ {t('writeStrategy')}</h3>
+                                        <p className="text-xs text-neutral-500">{t('writeStrategyDesc')}</p>
                                     </div>
-                                    <div className="p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl">
-                                        <h3 className="text-sm font-bold text-purple-400 mb-2">⚡ Read Strategy</h3>
-                                        <p className="text-xs text-neutral-400">The dashboard reads from your local cache for instant performance, while staying in sync with Zoho.</p>
+                                    <div className="p-4 bg-white/60 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+                                        <h3 className="text-sm font-bold text-purple-500 dark:text-purple-400 mb-2">⚡ {t('readStrategy')}</h3>
+                                        <p className="text-xs text-neutral-500">{t('readStrategyDesc')}</p>
                                     </div>
                                 </div>
 
                                 {/* Configuration Note */}
                                 <div className="p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-xl">
-                                    <h3 className="text-sm font-bold text-yellow-400 mb-2">🔑 API Configuration</h3>
-                                    <p className="text-xs text-neutral-400">
-                                        Update your Zoho credentials in the <code className="bg-neutral-900 px-2 py-1 rounded">.env</code> file:
+                                    <h3 className="text-sm font-bold text-yellow-500 dark:text-yellow-400 mb-2">🔑 {t('apiConfig')}</h3>
+                                    <p className="text-xs text-neutral-500">
+                                        {t('apiConfigDesc')}
                                     </p>
                                     <ul className="text-[10px] text-neutral-500 mt-2 space-y-1 font-mono">
                                         <li>• ZOHO_CLIENT_ID</li>
@@ -578,19 +578,19 @@ export default function AdminSettings() {
 
                 {activeTab === 'migration' && (
                     <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <section className="glass p-8 rounded-3xl bg-blue-600/10 border-blue-500/20 shadow-2xl shadow-blue-900/10">
-                            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                        <section className="glass p-8 rounded-3xl bg-blue-600/10 border border-blue-500/20 shadow-2xl shadow-blue-900/10">
+                            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
                                 <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
-                                Beds24 Data Migration
+                                {t('migrationTitle')}
                             </h2>
-                            <p className="text-sm text-neutral-400 mb-8 max-w-2xl leading-relaxed">
-                                Enter your Beds24 **Invite Code** to automatically import your properties, room categories, and current listings.
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-8 max-w-2xl leading-relaxed">
+                                {t('migrationDesc')}
                             </p>
                             <form onSubmit={handleBeds24Import} className="flex flex-col md:flex-row gap-4">
                                 <input
                                     type="text"
-                                    placeholder="Enter Invite Code"
-                                    className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl p-4 outline-none focus:border-blue-500 transition-colors"
+                                    placeholder={t('inviteCodePlaceholder')}
+                                    className={inputClass + " flex-1 rounded-xl p-4"}
                                     value={beds24InviteCode}
                                     onChange={e => setBeds24InviteCode(e.target.value)}
                                     required
@@ -599,11 +599,11 @@ export default function AdminSettings() {
                                     type="submit"
                                     disabled={importing}
                                     className={`px-10 py-4 rounded-xl font-bold transition-all shadow-lg ${importing
-                                        ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
+                                        ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'
                                         : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 active:scale-95'
                                         }`}
                                 >
-                                    {importing ? 'Importing...' : 'Start Import'}
+                                    {importing ? t('importing') : t('startImport')}
                                 </button>
                             </form>
                             {importStatus && (

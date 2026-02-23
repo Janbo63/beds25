@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
+import { useTranslations } from 'next-intl';
 
 interface BookingModalProps {
     booking: any;
@@ -9,6 +10,7 @@ interface BookingModalProps {
 }
 
 export default function BookingModal({ booking, onClose }: BookingModalProps) {
+    const t = useTranslations('BookingModal');
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -75,7 +77,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
     };
 
     const handleDelete = async () => {
-        if (!confirm('Are you sure you want to delete this booking? This action cannot be undone.')) return;
+        if (!confirm(t('deleteConfirm'))) return;
         setSaving(true);
         try {
             const res = await fetch(`/api/bookings?id=${booking.id}`, { method: 'DELETE' });
@@ -102,10 +104,10 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                 <div className="p-6 border-b border-neutral-200 dark:border-white/5 flex justify-between items-center bg-gradient-to-r from-alpaca-green/10 dark:from-alpaca-green/20 to-transparent shrink-0">
                     <div>
                         <h3 className="text-2xl font-bold text-neutral-900 dark:text-white leading-tight">
-                            {isEditing ? 'Edit Booking' : 'Booking Details'}
+                            {isEditing ? t('editBooking') : t('bookingDetails')}
                         </h3>
                         <p className="text-xs text-neutral-500 uppercase tracking-widest mt-1">
-                            Ref: {booking.externalId || booking.id.slice(-8)}
+                            {t('ref')}: {booking.externalId || booking.id.slice(-8)}
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -114,7 +116,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                                 onClick={() => setIsEditing(true)}
                                 className="px-4 py-2 text-xs font-bold uppercase tracking-wider bg-hotel-gold/10 border border-hotel-gold/30 text-hotel-gold rounded-xl hover:bg-hotel-gold/20 transition-all"
                             >
-                                ✏️ Edit
+                                ✏️ {t('edit')}
                             </button>
                         )}
                         <button
@@ -137,23 +139,23 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                     {/* Guest & Status Row */}
                     <div className="flex justify-between items-start gap-4">
                         <div className="flex-1">
-                            <label className={labelClass}>Guest Name</label>
+                            <label className={labelClass}>{t('guestName')}</label>
                             {isEditing ? (
                                 <input type="text" value={guestName} onChange={e => setGuestName(e.target.value)} className={inputClass} />
                             ) : (
                                 <h4 className="text-xl font-bold text-white">{booking.guestName}</h4>
                             )}
 
-                            <label className={`${labelClass} mt-3`}>Email</label>
+                            <label className={`${labelClass} mt-3`}>{t('email')}</label>
                             {isEditing ? (
                                 <input type="email" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} className={inputClass} placeholder="guest@email.com" />
                             ) : (
-                                <p className="text-sm text-neutral-400">{booking.guestEmail || 'No email'}</p>
+                                <p className="text-sm text-neutral-400">{booking.guestEmail || t('noEmail')}</p>
                             )}
                         </div>
 
                         <div className="w-40">
-                            <label className={labelClass}>Status</label>
+                            <label className={labelClass}>{t('status')}</label>
                             {isEditing ? (
                                 <select
                                     value={status}
@@ -164,11 +166,11 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                                                 '!border-amber-500/40 text-amber-400'
                                         }`}
                                 >
-                                    <option value="CONFIRMED" className="bg-white dark:bg-neutral-900">Confirmed</option>
-                                    <option value="REQUEST" className="bg-white dark:bg-neutral-900">Request</option>
-                                    <option value="NEW" className="bg-white dark:bg-neutral-900">New</option>
-                                    <option value="BLOCKED" className="bg-white dark:bg-neutral-900">Blocked</option>
-                                    <option value="CANCELLED" className="bg-white dark:bg-neutral-900">Cancelled</option>
+                                    <option value="CONFIRMED" className="bg-white dark:bg-neutral-900">{t('statusConfirmed')}</option>
+                                    <option value="REQUEST" className="bg-white dark:bg-neutral-900">{t('statusRequest')}</option>
+                                    <option value="NEW" className="bg-white dark:bg-neutral-900">{t('statusNew')}</option>
+                                    <option value="BLOCKED" className="bg-white dark:bg-neutral-900">{t('statusBlocked')}</option>
+                                    <option value="CANCELLED" className="bg-white dark:bg-neutral-900">{t('statusCancelled')}</option>
                                 </select>
                             ) : (
                                 <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-bold uppercase ${status === 'CONFIRMED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
@@ -186,7 +188,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                     <div className="grid grid-cols-2 gap-4 py-4 border-y border-white/5">
                         <div>
                             <label className={`${labelClass} flex items-center gap-2`}>
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Check-In
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> {t('checkIn')}
                             </label>
                             {isEditing ? (
                                 <input type="date" value={checkIn} onChange={e => setCheckIn(e.target.value)} className={inputClass} />
@@ -196,7 +198,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                         </div>
                         <div>
                             <label className={`${labelClass} flex items-center gap-2`}>
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Check-Out
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> {t('checkOut')}
                             </label>
                             {isEditing ? (
                                 <input type="date" value={checkOut} onChange={e => setCheckOut(e.target.value)} className={inputClass} />
@@ -210,19 +212,19 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                     <div className="bg-white/5 p-4 rounded-2xl space-y-3">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className={labelClass}>👨 Adults</label>
+                                <label className={labelClass}>👨 {t('adults')}</label>
                                 {isEditing ? (
                                     <input type="number" min={1} max={10} value={numAdults} onChange={e => setNumAdults(parseInt(e.target.value) || 1)} className={inputClass} />
                                 ) : (
-                                    <p className={`${displayClass} text-sm`}>{booking.numAdults || 0} Adults</p>
+                                    <p className={`${displayClass} text-sm`}>{booking.numAdults || 0} {t('adults')}</p>
                                 )}
                             </div>
                             <div>
-                                <label className={labelClass}>👶 Children</label>
+                                <label className={labelClass}>👶 {t('children')}</label>
                                 {isEditing ? (
                                     <input type="number" min={0} max={10} value={numChildren} onChange={e => setNumChildren(parseInt(e.target.value) || 0)} className={inputClass} />
                                 ) : (
-                                    <p className="text-sm text-neutral-400">{booking.numChildren || 0} Children</p>
+                                    <p className="text-sm text-neutral-400">{booking.numChildren || 0} {t('children')}</p>
                                 )}
                             </div>
                         </div>
@@ -233,11 +235,11 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                                 if (ages && ages.length > 0) {
                                     return (
                                         <div>
-                                            <label className={`${labelClass} mb-2`}>Guest Ages</label>
+                                            <label className={`${labelClass} mb-2`}>{t('guestAges')}</label>
                                             <div className="flex flex-wrap gap-2">
                                                 {ages.map((age: number, idx: number) => (
                                                     <div key={idx} className="px-3 py-1 bg-neutral-800 rounded-lg text-xs font-bold text-neutral-300">
-                                                        {age} yrs
+                                                        {age} {t('years')}
                                                     </div>
                                                 ))}
                                             </div>
@@ -253,28 +255,28 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
 
                     {/* Notes */}
                     <div>
-                        <label className={`${labelClass} flex items-center gap-2`}>📝 Notes / Special Requests</label>
+                        <label className={`${labelClass} flex items-center gap-2`}>📝 {t('notes')}</label>
                         {isEditing ? (
                             <textarea
                                 value={notes}
                                 onChange={e => setNotes(e.target.value)}
                                 rows={3}
                                 className={`${inputClass} resize-none`}
-                                placeholder="Any special requests or notes..."
+                                placeholder={t('notesPlaceholder')}
                             />
                         ) : booking.notes ? (
                             <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl">
                                 <p className="text-sm text-white leading-relaxed">{booking.notes}</p>
                             </div>
                         ) : (
-                            <p className="text-sm text-neutral-600 italic">No notes</p>
+                            <p className="text-sm text-neutral-600 italic">{t('noNotes')}</p>
                         )}
                     </div>
 
                     {/* Price & Source */}
                     <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
                         <div>
-                            <label className={labelClass}>Source Channel</label>
+                            <label className={labelClass}>{t('sourceChannel')}</label>
                             <div className="flex items-center gap-2 text-sm font-bold">
                                 <span className={`w-2 h-2 rounded-full ${booking.source?.toUpperCase() === 'AIRBNB' ? 'bg-rose-600' :
                                     booking.source?.toUpperCase().includes('BOOKING') ? 'bg-blue-600' : 'bg-hotel-gold'
@@ -283,7 +285,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                             </div>
                         </div>
                         <div className="text-right">
-                            <label className={labelClass}>Total Price</label>
+                            <label className={labelClass}>{t('totalPrice')}</label>
                             {isEditing ? (
                                 <input
                                     type="number"
@@ -305,7 +307,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                         <div className="space-y-3">
                             <div className="flex gap-3">
                                 <button
-                                    className="flex-1 py-3.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-2xl font-bold transition-all border border-white/5"
+                                    className="flex-1 py-3.5 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all border border-neutral-300 dark:border-white/5"
                                     onClick={() => {
                                         setIsEditing(false);
                                         // Reset to original values
@@ -320,14 +322,14 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                                         setNotes(booking.notes || '');
                                     }}
                                 >
-                                    Cancel
+                                    {t('cancel')}
                                 </button>
                                 <button
                                     className="flex-1 py-3.5 bg-hotel-gold hover:bg-yellow-500 text-black rounded-2xl font-bold transition-all shadow-xl shadow-hotel-gold/20 disabled:opacity-50"
                                     onClick={handleSave}
                                     disabled={saving || !hasChanges()}
                                 >
-                                    {saving ? 'Saving...' : 'Save Changes'}
+                                    {saving ? t('saving') : t('saveChanges')}
                                 </button>
                             </div>
                             <button
@@ -335,22 +337,22 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                                 onClick={handleDelete}
                                 disabled={saving}
                             >
-                                🗑️ Delete Booking
+                                🗑️ {t('deleteBooking')}
                             </button>
                         </div>
                     ) : (
                         <div className="flex gap-3">
                             <button
-                                className="flex-1 py-3.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-2xl font-bold transition-all border border-white/5"
+                                className="flex-1 py-3.5 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white rounded-2xl font-bold transition-all border border-neutral-300 dark:border-white/5"
                                 onClick={onClose}
                             >
-                                Close
+                                {t('close')}
                             </button>
                             <button
                                 className="flex-1 py-3.5 bg-hotel-gold hover:bg-yellow-500 text-black rounded-2xl font-bold transition-all shadow-xl shadow-hotel-gold/20"
                                 onClick={() => setIsEditing(true)}
                             >
-                                ✏️ Edit Booking
+                                ✏️ {t('editBookingBtn')}
                             </button>
                         </div>
                     )}
