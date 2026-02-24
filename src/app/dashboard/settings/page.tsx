@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import MediaGallery from '@/components/dashboard/MediaGallery';
+import RoomImageManager from '@/components/dashboard/RoomImageManager';
 
 export default function AdminSettings() {
     const t = useTranslations('Settings');
@@ -454,6 +455,18 @@ export default function AdminSettings() {
                                                 media={room.media || []}
                                                 roomId={room.id}
                                                 onMediaChange={() => {
+                                                    fetch('/api/admin/rooms')
+                                                        .then(res => res.json())
+                                                        .then(data => setRooms(data));
+                                                }}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-3 pt-3 border-t border-neutral-200 dark:border-white/5">
+                                            <RoomImageManager
+                                                images={room.roomImages || []}
+                                                roomId={room.id}
+                                                onImagesChange={() => {
                                                     fetch('/api/admin/rooms')
                                                         .then(res => res.json())
                                                         .then(data => setRooms(data));

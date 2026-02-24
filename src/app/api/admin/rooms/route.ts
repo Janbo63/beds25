@@ -67,7 +67,8 @@ export async function GET() {
         const rooms = await prisma.room.findMany({
             include: {
                 media: true,
-                channelSettings: true
+                channelSettings: true,
+                roomImages: { orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }] },
             }
         });
 
