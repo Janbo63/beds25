@@ -1,0 +1,8 @@
+{
+    "crons": [
+        {
+            "path": "/api/cron/charge-balances",
+            "schedule": "0 8 * * *"
+        }
+    ]
+}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { withCors, corsOptionsResponse } from '@/lib/cors';
 
+
 export const dynamic = 'force-dynamic';
 
 /**
@@ -62,9 +63,11 @@ export async function GET(request: NextRequest) {
         });
 
         // 2. Get existing bookings that overlap with the requested date range
+        // Block on paid/confirmed states; allow CANCELLED and PAYMENT_FAILED
+        const BLOCKING_STATUSES = ['DEPOSIT_PAID', 'BALANCE_PENDING', 'FULLY_PAID', 'CONFIRMED'];
         const existingBookings = await prisma.booking.findMany({
             where: {
-                status: { notIn: ['CANCELLED'] },
+                status: { in: BLOCKING_STATUSES },
                 checkIn: { lt: checkOutDate },
                 checkOut: { gt: checkInDate },
             },
@@ -174,7 +177,7 @@ export async function GET(request: NextRequest) {
             }),
             request
         );
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[Public API] Availability Error:', error);
         return withCors(
             NextResponse.json({ error: 'Failed to check availability' }, { status: 500 }),

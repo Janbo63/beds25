@@ -11,173 +11,183 @@ datasource db {
 }
 
 model Organization {
-  id          String   @id @default(cuid())
-  name        String   @unique   // "Hotel Marysieńka"
-  slug        String   @unique   // "hotel-marysienka" (for URLs/subdomains)
-  email       String?
-  phone       String?
-  currency    String?  @default("EUR")
-  language    String?  @default("en") // Default UI language
-  logoUrl     String?
-  website     String?
-  properties  Property[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String     @id @default(cuid())
+  name       String     @unique // "Hotel Marysieńka"
+  slug       String     @unique // "hotel-marysienka" (for URLs/subdomains)
+  email      String?
+  phone      String?
+  currency   String?    @default("EUR")
+  language   String?    @default("en") // Default UI language
+  logoUrl    String?
+  website    String?
+  properties Property[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }
 
 model Property {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  address     String?
-  email       String?
-  phone       String?
-  latitude    Float?
-  longitude   Float?
-  starRating  Float?
-  propertyType String?  // "hotel", "apartment", "bnb", "guesthouse", "villa"
-  currency    String?  @default("EUR")
-  timezone    String?  @default("Europe/Warsaw")
-  checkInTime  String?  @default("15:00")
-  checkOutTime String?  @default("11:00")
+  id                        String        @id @default(cuid())
+  name                      String        @unique
+  description               String?
+  address                   String?
+  email                     String?
+  phone                     String?
+  latitude                  Float?
+  longitude                 Float?
+  starRating                Float?
+  propertyType              String? // "hotel", "apartment", "bnb", "guesthouse", "villa"
+  currency                  String?       @default("EUR")
+  timezone                  String?       @default("Europe/Warsaw")
+  checkInTime               String?       @default("15:00")
+  checkOutTime              String?       @default("11:00")
   defaultCancellationPolicy String? // "free", "flexible", "moderate", "strict"
-  facilities  String?  // JSON array of facility names
-  logoUrl     String?
-  externalId  String?  @unique // Beds24 Property ID
-  beds24InviteCode String? // For re-authentication
-  beds24RefreshToken String? // For API v2
-  bookingComId String? @unique // Booking.com Bhid
-  airbnbId     String? @unique
-  zohoAdminId  String? @unique // Link to Zoho "Booking Admins" module
-  organizationId String? // Tenant/owner
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  media        Media[]
-  rooms        Room[]
+  facilities                String? // JSON array of facility names
+  logoUrl                   String?
+  externalId                String?       @unique // Beds24 Property ID
+  beds24InviteCode          String? // For re-authentication
+  beds24RefreshToken        String? // For API v2
+  bookingComId              String?       @unique // Booking.com Bhid
+  airbnbId                  String?       @unique
+  zohoAdminId               String?       @unique // Link to Zoho "Booking Admins" module
+  organizationId            String? // Tenant/owner
+  organization              Organization? @relation(fields: [organizationId], references: [id])
+  media                     Media[]
+  rooms                     Room[]
 }
 
 model Media {
-  id          String   @id @default(cuid())
-  url         String
-  alt         String?
-  type        String   @default("IMAGE") // IMAGE, VIDEO
-  sortOrder   Int      @default(0)       // For carousel ordering
-  caption     String?                    // For carousel captions
-  isHero      Boolean  @default(false)   // Hero image/video for property or room
-  propertyId  String?
-  property    Property? @relation(fields: [propertyId], references: [id])
-  roomId      String?
-  room        Room?     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
+  id         String    @id @default(cuid())
+  url        String
+  alt        String?
+  type       String    @default("IMAGE") // IMAGE, VIDEO
+  sortOrder  Int       @default(0) // For carousel ordering
+  caption    String? // For carousel captions
+  isHero     Boolean   @default(false) // Hero image/video for property or room
+  propertyId String?
+  property   Property? @relation(fields: [propertyId], references: [id])
+  roomId     String?
+  room       Room?     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
 }
 
 model ChannelSettings {
-  id          String   @id @default(cuid())
-  channel     String   // "AIRBNB", "BOOKING.COM", "EXPEDIA"
-  multiplier  Float    @default(1.15) // e.g. 1.15 for 15% markup
-  discount    Float    @default(0.0)
-  roomId      String
-  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  id         String @id @default(cuid())
+  channel    String // "AIRBNB", "BOOKING.COM", "EXPEDIA"
+  multiplier Float  @default(1.15) // e.g. 1.15 for 15% markup
+  discount   Float  @default(0.0)
+  roomId     String
+  room       Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
   @@unique([channel, roomId])
 }
 
 model Room {
-  id          String   @id @default(cuid())
-  internalName String? // Custom name for dashboard display
-  number      String?
-  name        String?
-  description String?
-  basePrice   Float    @default(0)
-  capacity    Int      @default(2)
-  maxAdults   Int      @default(2)
-  maxChildren Int      @default(0)
-  minNights   Int      @default(1)
-  size        Float?
-  bedConfig   String?
-  amenities   String?
-  roomType    String?  // "single", "double", "twin", "suite", "apartment", "dormitory"
+  id            String  @id @default(cuid())
+  internalName  String? // Custom name for dashboard display
+  number        String?
+  name          String?
+  description   String?
+  basePrice     Float   @default(0)
+  capacity      Int     @default(2)
+  maxAdults     Int     @default(2)
+  maxChildren   Int     @default(0)
+  minNights     Int     @default(1)
+  size          Float?
+  bedConfig     String?
+  amenities     String?
+  roomType      String? // "single", "double", "twin", "suite", "apartment", "dormitory"
   smokingPolicy String? @default("non_smoking") // "smoking", "non_smoking", "both"
-  floor       String?
-  viewType    String?  // "sea", "mountain", "garden", "city", "pool"
-  
-  propertyId  String
-  property    Property @relation(fields: [propertyId], references: [id])
-  
-  externalId  String?  @unique // Beds24 Room/Unit ID
+  floor         String?
+  viewType      String? // "sea", "mountain", "garden", "city", "pool"
+
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  externalId       String? @unique // Beds24 Room/Unit ID
   bookingComRoomId String? @unique
   airbnbRoomId     String? @unique
-  
-  bookings    Booking[]
-  icalSyncs   IcalSync[]
-  priceRules  PriceRule[]
+
+  bookings        Booking[]
+  icalSyncs       IcalSync[]
+  priceRules      PriceRule[]
   channelSettings ChannelSettings[]
-  media       Media[]
+  media           Media[]
+  images          RoomImage[]
 }
 
 model Guest {
-  id          String   @id @default(cuid())
-  name        String
-  firstName   String?
-  lastName    String?
-  email       String?  @unique
-  phone       String?
-  address     String?
-  city        String?
-  zipCode     String?
-  country     String?
-  nationality String?
-  language    String?  @default("pl")
-  notes       String?
-  marketingOptIn Boolean @default(false)
-  bookings    Booking[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String    @id @default(cuid())
+  name           String
+  firstName      String?
+  lastName       String?
+  email          String?   @unique
+  phone          String?
+  address        String?
+  city           String?
+  zipCode        String?
+  country        String?
+  nationality    String?
+  language       String?   @default("pl")
+  notes          String?
+  marketingOptIn Boolean   @default(false)
+  bookings       Booking[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Booking {
-  id          String   @id @default(cuid())
-  bookingRef  String?  @unique           // Human-readable: ZAT-2026-0042
-  roomId      String
-  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  guestId     String?
-  guest       Guest?   @relation(fields: [guestId], references: [id])
-  guestName   String   // Snapshot of name at booking
-  guestEmail  String?  // Snapshot of email
-  numAdults   Int      @default(2)
-  numChildren Int      @default(0)
-  guestAges   String?  // JSON array: [35, 33, 7, 4] - ages of all guests
-  checkIn     DateTime
-  checkOut    DateTime
-  arrivalTime String?
-  totalPrice  Float
-  status      String   // "CONFIRMED", "CANCELLED", "NEW", "REQUEST", "BLOCKED", "DEPOSIT_PAID", "FULLY_PAID"
-  source      String   // "DIRECT", "AIRBNB", "BOOKING.COM", "BEDS24", "WEBSITE"
-  externalId  String?  @unique
-  notes       String?  // Special requests/comments
-  paymentMethod  String?  // "card", "wallet", "cash", "bank_transfer"
-  paymentTiming  String?  // "pay_online_now", "pay_online_later", "pay_at_property"
-  paymentStatus  String?  @default("pending") // "pending", "paid", "partial", "refunded", "failed"
+  id            String   @id @default(cuid())
+  bookingRef    String?  @unique // Human-readable: ZAT-2026-0042
+  roomId        String
+  room          Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  guestId       String?
+  guest         Guest?   @relation(fields: [guestId], references: [id])
+  guestName     String // Snapshot of name at booking
+  guestEmail    String? // Snapshot of email
+  numAdults     Int      @default(2)
+  numChildren   Int      @default(0)
+  guestAges     String? // JSON array: [35, 33, 7, 4] - ages of all guests
+  checkIn       DateTime
+  checkOut      DateTime
+  arrivalTime   String?
+  totalPrice    Float
+  status        String // "CONFIRMED", "CANCELLED", "NEW", "REQUEST", "BLOCKED"
+  // "DEPOSIT_PAID", "BALANCE_PENDING", "FULLY_PAID", "PAYMENT_FAILED"
+  source        String // "DIRECT", "AIRBNB", "BOOKING.COM", "BEDS24", "WEBSITE"
+  externalId    String?  @unique
+  notes         String? // Special requests/comments
+  paymentMethod String? // "card", "wallet", "cash", "bank_transfer"
+  paymentTiming String? // "pay_online_now", "pay_online_later", "pay_at_property"
+  paymentStatus String?  @default("pending") // "pending", "paid", "partial", "refunded", "failed"
 
   // Split-payment fields (10% deposit + 90% balance)
-  depositAmount          Float?    // 10% deposit taken at booking
-  depositPaidAt          DateTime? // When deposit was paid
-  balanceAmount          Float?    // 90% remaining balance
-  balancePaidAt          DateTime? // When balance was charged
-  balanceDueDate         DateTime? // checkIn - 3 days
-  stripePaymentIntentId  String?   @unique // Stripe PI for deposit
-  stripeCustomerId       String?   // For charging saved card later
+  depositAmount         Float? // 10% deposit taken at booking
+  depositPaidAt         DateTime? // When deposit was paid
+  balanceAmount         Float? // 90% remaining balance
+  balancePaidAt         DateTime? // When balance was charged
+  balanceDueDate        DateTime? // checkIn - 3 days
+  stripePaymentIntentId String?   @unique // Stripe PI for deposit
+  stripeDepositId       String? // Stripe PaymentIntent ID for deposit charge (alpaca site)
+  stripeBalanceId       String? // Stripe PaymentIntent ID for T-3 balance charge
+  stripeCustomerId      String? // For charging saved card later
+  stripePaymentMethodId String? // Saved payment method for off-session T-3 charge
 
-  bookingComOrderId      String? @unique
-  bookingComPincode      String?
-  bookingComReservation  String?
-  cancellationPolicy     String?
-  commissionAmount       Float?
-  commissionPercent      Float?
-  currency               String? @default("EUR")
-  voucherCode            String?  // Promo/voucher code used
-  discountAmount         Float?   // Actual discount applied
-  propertyId             String?  // Direct link to property
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  zohoBookingDealId String? // Zoho CRM Deal ID for back-linking
+  nipNumber         String? // Polish VAT / NIP number for invoice
+  specialRequests   String? // Free text from booking form (distinct from internal notes)
+
+  bookingComOrderId     String?  @unique
+  bookingComPincode     String?
+  bookingComReservation String?
+  cancellationPolicy    String?
+  commissionAmount      Float?
+  commissionPercent     Float?
+  currency              String?  @default("EUR")
+  voucherCode           String? // Promo/voucher code used
+  discountAmount        Float? // Actual discount applied
+  propertyId            String? // Direct link to property
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 model PriceRule {
@@ -193,32 +203,32 @@ model PriceRule {
 }
 
 model IcalSync {
-  id          String   @id @default(cuid())
-  roomId      String
-  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  channel     String   // "AIRBNB", "BOOKING.COM"
-  url         String   // The external iCal URL to import from
-  lastSynced  DateTime?
+  id         String    @id @default(cuid())
+  roomId     String
+  room       Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  channel    String // "AIRBNB", "BOOKING.COM"
+  url        String // The external iCal URL to import from
+  lastSynced DateTime?
 }
 
 model VoucherCode {
-  id              String    @id @default(cuid())
-  code            String    @unique
+  id              String              @id @default(cuid())
+  code            String              @unique
   description     String?
-  discountType    String    // "percentage" | "fixed_amount"
-  discountValue   Float     // 25 (= 25%) or 50 (= €50)
-  currency        String?   @default("EUR")
+  discountType    String // "percentage" | "fixed_amount"
+  discountValue   Float // 25 (= 25%) or 50 (= €50)
+  currency        String?             @default("EUR")
   minNights       Int?
   minBookingValue Float?
   maxUses         Int?
-  usedCount       Int       @default(0)
+  usedCount       Int                 @default(0)
   validFrom       DateTime?
   validUntil      DateTime?
-  applicableTo    String?   // JSON: room/property IDs, null = all
-  source          String?   // "BOOKING.COM", "DIRECT", null = all
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  applicableTo    String? // JSON: room/property IDs, null = all
+  source          String? // "BOOKING.COM", "DIRECT", null = all
+  isActive        Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
   redemptions     VoucherRedemption[]
 }
 
@@ -233,19 +243,32 @@ model VoucherRedemption {
   @@unique([voucherId, bookingId])
 }
 
+// Room images with typed categories for alpaca site booking UX
+model RoomImage {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  url       String // Full URL or relative path
+  type      String // "HERO" | "GALLERY" | "THUMBNAIL" | "PROPERTY"
+  altText   String?
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
 model WebhookLog {
-  id          String   @id @default(cuid())
-  direction   String   // "INCOMING" (Beds24→Beds25), "OUTGOING" (Beds25→Beds24)
-  source      String   // "BEDS24", "ZOHO", "STRIPE", etc.
-  event       String   // "BOOKING_CREATE", "BOOKING_UPDATE", "BOOKING_CANCEL", "RATE_SYNC"
-  status      String   // "SUCCESS", "ERROR", "SKIPPED"
-  bookingId   String?  // Local booking ID if applicable
-  externalId  String?  // External booking/resource ID
-  roomId      String?  // Room involved
-  payload     String?  // Raw request/response body (JSON string)
-  error       String?  // Error message if failed
-  metadata    String?  // Additional context (JSON string)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  direction  String // "INCOMING" (Beds24→Beds25), "OUTGOING" (Beds25→Beds24)
+  source     String // "BEDS24", "ZOHO", "STRIPE", etc.
+  event      String // "BOOKING_CREATE", "BOOKING_UPDATE", "BOOKING_CANCEL", "RATE_SYNC"
+  status     String // "SUCCESS", "ERROR", "SKIPPED"
+  bookingId  String? // Local booking ID if applicable
+  externalId String? // External booking/resource ID
+  roomId     String? // Room involved
+  payload    String? // Raw request/response body (JSON string)
+  error      String? // Error message if failed
+  metadata   String? // Additional context (JSON string)
+  createdAt  DateTime @default(now())
 
   @@index([createdAt])
   @@index([direction, status])
