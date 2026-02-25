@@ -199,12 +199,13 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
 
                                     // Color classes for booking blocks
                                     const bookingColorClass = booking ? (
-                                        booking.status === 'BLOCKED' ? 'bg-neutral-800 text-neutral-500' :
-                                            booking.status === 'CANCELLED' ? 'bg-rose-900/40 text-rose-400' :
-                                                booking.status === 'REQUEST' ? 'bg-amber-600 text-white' :
-                                                    booking.source?.toUpperCase() === 'AIRBNB' ? 'bg-[#FF5A5F] text-white' :
-                                                        booking.source?.toUpperCase().includes('BOOKING') ? 'bg-[#003580] text-white' :
-                                                            'bg-alpaca-green text-white'
+                                        booking.isPrivate ? 'bg-fuchsia-800 text-white' :
+                                            booking.status === 'BLOCKED' ? 'bg-neutral-800 text-neutral-500' :
+                                                booking.status === 'CANCELLED' ? 'bg-rose-900/40 text-rose-400' :
+                                                    booking.status === 'REQUEST' ? 'bg-amber-600 text-white' :
+                                                        booking.source?.toUpperCase() === 'AIRBNB' ? 'bg-[#FF5A5F] text-white' :
+                                                            booking.source?.toUpperCase().includes('BOOKING') ? 'bg-[#003580] text-white' :
+                                                                'bg-alpaca-green text-white'
                                     ) : '';
 
                                     return (
@@ -317,10 +318,12 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                         return isCenterDay ? (
                                                             <div className="sticky left-0 right-0 flex flex-col items-center gap-1 w-full px-2 overflow-visible whitespace-nowrap">
                                                                 <div className="flex items-center gap-1.5 opacity-90">
-                                                                    <span className="scale-110">{booking.status === 'BLOCKED' ? '🔒' :
-                                                                        booking.source?.toUpperCase() === 'AIRBNB' ? '🏠' :
-                                                                            booking.source?.toUpperCase().includes('BOOKING') ? '✈️' : '✨'}</span>
-                                                                    {booking.totalPrice > 0 && (
+                                                                    <span className="scale-110">{
+                                                                        booking.isPrivate ? '🤫' :
+                                                                            booking.status === 'BLOCKED' ? '🔒' :
+                                                                                booking.source?.toUpperCase() === 'AIRBNB' ? '🏠' :
+                                                                                    booking.source?.toUpperCase().includes('BOOKING') ? '✈️' : '✨'}</span>
+                                                                    {booking.totalPrice > 0 && !booking.isPrivate && (
                                                                         <span className="font-black text-white whitespace-nowrap">
                                                                             {booking.totalPrice} zł
                                                                         </span>

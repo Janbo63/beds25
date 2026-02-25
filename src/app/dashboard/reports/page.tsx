@@ -18,7 +18,8 @@ export default function ReportsPage() {
         startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
         endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0],
         propertyId: '',
-        source: ''
+        source: '',
+        privateStatus: 'all'
     });
     const [loading, setLoading] = useState(false);
 
@@ -128,6 +129,20 @@ export default function ReportsPage() {
                         <option value="AIRBNB">Airbnb</option>
                         <option value="BOOKING.COM">Booking.com</option>
                         <option value="BEDS24">Beds24</option>
+                    </select>
+                </div>
+                <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500 flex items-center gap-2">
+                        <Filter size={12} /> Booking Type
+                    </label>
+                    <select
+                        className={inputClass + " min-w-[200px]"}
+                        value={reportFilters.privateStatus}
+                        onChange={e => setReportFilters({ ...reportFilters, privateStatus: e.target.value })}
+                    >
+                        <option value="all">All Bookings</option>
+                        <option value="public">Public (Paying)</option>
+                        <option value="private">Private (Friends/Family)</option>
                     </select>
                 </div>
             </section>

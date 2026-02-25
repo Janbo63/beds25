@@ -9,9 +9,16 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate');
     const propertyId = searchParams.get('propertyId');
     const source = searchParams.get('source');
+    const privateStatus = searchParams.get('privateStatus');
 
     try {
         const where: any = {};
+
+        if (privateStatus === 'public') {
+            where.isPrivate = false;
+        } else if (privateStatus === 'private') {
+            where.isPrivate = true;
+        }
 
         if (startDate && endDate) {
             where.checkIn = {
@@ -59,6 +66,7 @@ export async function GET(request: NextRequest) {
                 totalPrice: b.totalPrice,
                 status: b.status,
                 source: b.source,
+                isPrivate: b.isPrivate,
                 guestDetails: b.guest
             })),
             properties

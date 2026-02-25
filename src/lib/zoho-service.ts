@@ -133,6 +133,7 @@ function mapZohoToBooking(zohoRecord: ZohoRecord): any {
         discountAmount: parseFloat(zohoRecord.Discount_Amount || 0),
         arrivalTime: zohoRecord.Arrival_Time,
         currency: zohoRecord.Currency1 || 'EUR',
+        isPrivate: zohoRecord.private === true || zohoRecord.private === 'true' || zohoRecord.Private === true || zohoRecord.Private === 'true',
     };
 }
 

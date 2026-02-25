@@ -154,6 +154,7 @@ model Booking {
   status        String // "CONFIRMED", "CANCELLED", "NEW", "REQUEST", "BLOCKED"
   // "DEPOSIT_PAID", "BALANCE_PENDING", "FULLY_PAID", "PAYMENT_FAILED"
   source        String // "DIRECT", "AIRBNB", "BOOKING.COM", "BEDS24", "WEBSITE"
+  isPrivate     Boolean  @default(false) // For friends and family bookings
   externalId    String?  @unique
   notes         String? // Special requests/comments
   paymentMethod String? // "card", "wallet", "cash", "bank_transfer"
