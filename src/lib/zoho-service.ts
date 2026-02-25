@@ -90,6 +90,7 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         Discount_Amount: booking.discountAmount,
         Source_Channel: booking.source,
         Currency1: booking.currency,
+        private: booking.isPrivate,
     };
 
     if (contactId) {
@@ -255,8 +256,13 @@ export const bookingService = {
      * Update a booking in Zoho CRM, then sync to local DB
      */
     async update(id: string, updates: any) {
+        // Fetch existing from local DB to merge for Zoho payload
+        const existing = await prisma.booking.findUnique({ where: { id } });
+        if (!existing) throw new Error('Booking not found');
+        const merged = { ...existing, ...updates };
+
         // 1. Update in Zoho CRM
-        const zohoData = mapBookingToZoho(updates);
+        const zohoData = mapBookingToZoho(merged);
         await zohoClient.updateRecord(ZOHO_MODULES.BOOKINGS, id, zohoData);
 
         // 2. Sync to local database

@@ -17,6 +17,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
 
     // Editable fields
     const [status, setStatus] = useState(booking?.status || 'CONFIRMED');
+    const [isPrivate, setIsPrivate] = useState(booking?.isPrivate || false);
     const [guestName, setGuestName] = useState(booking?.guestName || '');
     const [guestEmail, setGuestEmail] = useState(booking?.guestEmail || '');
     const [checkIn, setCheckIn] = useState(booking?.checkIn?.slice(0, 10) || '');
@@ -30,6 +31,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
 
     const hasChanges = () => {
         return status !== booking.status ||
+            isPrivate !== (booking.isPrivate || false) ||
             guestName !== booking.guestName ||
             guestEmail !== (booking.guestEmail || '') ||
             checkIn !== booking.checkIn?.slice(0, 10) ||
@@ -48,6 +50,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
 
             // Only send changed fields
             if (status !== booking.status) updates.status = status;
+            if (isPrivate !== (booking.isPrivate || false)) updates.isPrivate = isPrivate;
             if (guestName !== booking.guestName) updates.guestName = guestName;
             if (guestEmail !== (booking.guestEmail || '')) updates.guestEmail = guestEmail;
             if (checkIn !== booking.checkIn?.slice(0, 10)) updates.checkIn = new Date(checkIn);
@@ -180,6 +183,17 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                                     }`}>
                                     {status}
                                 </span>
+                            )}
+                            {isEditing && (
+                                <label className="flex items-center gap-2 mt-4 text-sm text-neutral-500 font-bold dark:text-neutral-400 cursor-pointer">
+                                    <input type="checkbox" checked={isPrivate} onChange={e => setIsPrivate(e.target.checked)} className="rounded border-neutral-300 dark:border-white/10 dark:bg-white/5 w-4 h-4 accent-hotel-gold" />
+                                    {t('privateBooking', { fallback: 'Private Booking' })}
+                                </label>
+                            )}
+                            {!isEditing && isPrivate && (
+                                <div className="mt-3 inline-flex px-3 py-1.5 rounded-lg text-xs font-bold uppercase bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/30 gap-1.5 items-center">
+                                    <span className="text-sm">🤫</span> {t('privateBooking', { fallback: 'Private' })}
+                                </div>
                             )}
                         </div>
                     </div>

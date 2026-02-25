@@ -32,7 +32,8 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
         checkOut: '',
         totalPrice: '',
         notes: '',
-        status: 'CONFIRMED'
+        status: 'CONFIRMED',
+        isPrivate: false
     });
 
     useEffect(() => {
@@ -69,7 +70,8 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             guestAges: [],
                             totalPrice: '',
                             notes: '',
-                            status: 'CONFIRMED'
+                            status: 'CONFIRMED',
+                            isPrivate: false
                         });
                     } else {
                         // Reset for manual entry
@@ -85,7 +87,8 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             checkOut: '',
                             totalPrice: '',
                             notes: '',
-                            status: 'CONFIRMED'
+                            status: 'CONFIRMED',
+                            isPrivate: false
                         });
                     }
                 });
@@ -376,6 +379,10 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                                 <option value="REQUEST">{t('statusRequest')}</option>
                                 <option value="BLOCKED">{t('statusBlocked')}</option>
                             </select>
+                            <label className="flex items-center gap-2 mt-2 text-sm text-neutral-500 font-bold dark:text-neutral-400 cursor-pointer pt-2">
+                                <input type="checkbox" checked={formData.isPrivate} onChange={e => setFormData({ ...formData, isPrivate: e.target.checked })} className="rounded border-neutral-300 dark:border-neutral-800 dark:bg-neutral-950 w-4 h-4 accent-hotel-gold" />
+                                {t('privateBooking', { fallback: 'Private Booking' })}
+                            </label>
                         </div>
                     </div>
 

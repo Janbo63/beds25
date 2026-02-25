@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
             roomId, guestName, guestEmail,
             numAdults, numChildren, guestAges,
             checkIn, checkOut, totalPrice,
-            notes, status, source
+            notes, status, source, isPrivate
         } = body;
 
         console.log('[API] Creating booking:', { roomId, guestName, dates: { checkIn, checkOut } });
@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
             notes: notes || null,
             status,
             source: source || 'DIRECT',
+            isPrivate,
         });
 
         return NextResponse.json(booking);
