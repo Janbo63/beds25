@@ -13,10 +13,13 @@ export default function AdminSettings() {
 
     // Form states
     const [propertyDetails, setPropertyDetails] = useState({
+        id: '',
         bookingComId: '',
         airbnbId: '',
         name: ''
     });
+    const [propertyMedia, setPropertyMedia] = useState<any[]>([]);
+
     const [newRoom, setNewRoom] = useState({
         number: '',
         name: '',
@@ -36,7 +39,7 @@ export default function AdminSettings() {
     const [syncing, setSyncing] = useState(false);
     const [syncStatus, setSyncStatus] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
 
-    useEffect(() => {
+    const loadRooms = () => {
         fetch('/api/admin/rooms')
             .then(res => res.json())
             .then(data => {
@@ -45,8 +48,30 @@ export default function AdminSettings() {
                     const firstRoom = data[0];
                     setPropertyId(firstRoom.propertyId);
                 }
-                setLoading(false);
             });
+    };
+
+    const loadProperty = () => {
+        fetch('/api/admin/property')
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.id) {
+                    setPropertyDetails({
+                        id: data.id,
+                        bookingComId: data.bookingComId || '',
+                        airbnbId: data.airbnbId || '',
+                        name: data.name || ''
+                    });
+                    setPropertyMedia(data.media || []);
+                }
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        loadRooms();
+        loadProperty();
     }, []);
 
 
@@ -267,6 +292,27 @@ export default function AdminSettings() {
                     </section>
                 )}
 
+                {activeTab === 'general' && (
+                    <section className="glass p-8 rounded-3xl border border-neutral-200 dark:border-white/5 bg-white/80 dark:bg-white/5 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
+                            <span className="w-2 h-6 bg-hotel-gold rounded-full"></span>
+                            Property Gallery
+                        </h2>
+                        <p className="text-neutral-500 text-sm mb-6">
+                            These images represent the entire farm (e.g., exterior, grounds, alpacas) and are displayed in the main website gallery.
+                        </p>
+                        {propertyDetails.id ? (
+                            <MediaGallery
+                                media={propertyMedia}
+                                propertyId={propertyDetails.id}
+                                onMediaChange={loadProperty}
+                            />
+                        ) : (
+                            <p className="text-neutral-500 text-sm">Please create a room to initialize the property first.</p>
+                        )}
+                    </section>
+                )}
+
 
                 {activeTab === 'units' && (
                     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -450,17 +496,6 @@ export default function AdminSettings() {
                                             </button>
                                         </div>
 
-                                        <div className="space-y-3 pt-3 border-t border-neutral-200 dark:border-white/5">
-                                            <MediaGallery
-                                                media={room.media || []}
-                                                roomId={room.id}
-                                                onMediaChange={() => {
-                                                    fetch('/api/admin/rooms')
-                                                        .then(res => res.json())
-                                                        .then(data => setRooms(data));
-                                                }}
-                                            />
-                                        </div>
 
                                         <div className="space-y-3 pt-3 border-t border-neutral-200 dark:border-white/5">
                                             <RoomImageManager
