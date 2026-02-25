@@ -109,7 +109,17 @@
         "startImport": "Rozpocznij import",
         "importing": "Importowanie...",
         "importSuccess": "Dane zaimportowane pomyślnie! Odświeżanie...",
-        "deleteRoomConfirm": "Czy na pewno chcesz usunąć ten pokój?"
+        "deleteRoomConfirm": "Czy na pewno chcesz usunąć ten pokój?",
+        "propertyGallery": "Galeria Obiektu",
+        "propertyGalleryDesc": "Te zdjęcia przedstawiają całą farmę (np. budynek z zewnątrz, teren, alpaki) i są wyświetlane w głównej galerii na stronie internetowej.",
+        "propertyGalleryEmpty": "Najpierw utwórz pokój, aby zainicjować obiekt.",
+        "bookingImages": "Zdjęcia Rezerwacji",
+        "bookingImagesEmpty": "Brak zdjęć rezerwacji. Prześlij zdjęcia według typu dla widgetu rezerwacji na stronie o alpakach.",
+        "upload": "Prześlij",
+        "uploading": "Przesyłanie...",
+        "hero": "Główne (Hero)",
+        "gallery": "Galeria",
+        "thumbnail": "Miniaturka"
     },
     "BookingModal": {
         "editBooking": "Edytuj rezerwację",

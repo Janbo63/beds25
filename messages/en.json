@@ -109,7 +109,17 @@
         "startImport": "Start Import",
         "importing": "Importing...",
         "importSuccess": "Data imported successfully! Refreshing...",
-        "deleteRoomConfirm": "Are you sure you want to delete this room/unit?"
+        "deleteRoomConfirm": "Are you sure you want to delete this room/unit?",
+        "propertyGallery": "Property Gallery",
+        "propertyGalleryDesc": "These images represent the entire farm (e.g., exterior, grounds, alpacas) and are displayed in the main website gallery.",
+        "propertyGalleryEmpty": "Please create a room to initialize the property first.",
+        "bookingImages": "Booking Images",
+        "bookingImagesEmpty": "No booking images yet. Upload images by type for the alpaca site booking widget.",
+        "upload": "Upload",
+        "uploading": "Uploading...",
+        "hero": "Hero",
+        "gallery": "Gallery",
+        "thumbnail": "Thumbnail"
     },
     "BookingModal": {
         "editBooking": "Edit Booking",

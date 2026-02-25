@@ -296,10 +296,10 @@ export default function AdminSettings() {
                     <section className="glass p-8 rounded-3xl border border-neutral-200 dark:border-white/5 bg-white/80 dark:bg-white/5 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-neutral-900 dark:text-white">
                             <span className="w-2 h-6 bg-hotel-gold rounded-full"></span>
-                            Property Gallery
+                            {t('propertyGallery')}
                         </h2>
                         <p className="text-neutral-500 text-sm mb-6">
-                            These images represent the entire farm (e.g., exterior, grounds, alpacas) and are displayed in the main website gallery.
+                            {t('propertyGalleryDesc')}
                         </p>
                         {propertyDetails.id ? (
                             <MediaGallery
@@ -308,7 +308,7 @@ export default function AdminSettings() {
                                 onMediaChange={loadProperty}
                             />
                         ) : (
-                            <p className="text-neutral-500 text-sm">Please create a room to initialize the property first.</p>
+                            <p className="text-neutral-500 text-sm">{t('propertyGalleryEmpty')}</p>
                         )}
                     </section>
                 )}

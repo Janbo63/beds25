@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { Upload, Trash2, Eye, EyeOff, ChevronUp, ChevronDown, Image as ImageIcon } from 'lucide-react';
 
 
@@ -22,12 +23,6 @@ interface RoomImageManagerProps {
 
 const IMAGE_TYPES = ['HERO', 'GALLERY', 'THUMBNAIL'] as const;
 
-const typeLabels: Record<string, string> = {
-    HERO: 'Hero',
-    GALLERY: 'Gallery',
-    THUMBNAIL: 'Thumbnail',
-};
-
 const typeColors: Record<string, string> = {
     HERO: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     GALLERY: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -41,6 +36,7 @@ const typeColorsLight: Record<string, string> = {
 };
 
 export default function RoomImageManager({ images, roomId, onImagesChange }: RoomImageManagerProps) {
+    const t = useTranslations('Settings');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
     const [uploadType, setUploadType] = useState<string>('GALLERY');
@@ -159,7 +155,7 @@ export default function RoomImageManager({ images, roomId, onImagesChange }: Roo
             <div className="flex items-center justify-between">
                 <label className="text-[10px] uppercase text-neutral-500 font-bold tracking-widest flex items-center gap-1.5">
                     <ImageIcon size={12} />
-                    Booking Images
+                    {t('bookingImages')}
                 </label>
                 <div className="flex items-center gap-2">
                     <select
@@ -168,7 +164,7 @@ export default function RoomImageManager({ images, roomId, onImagesChange }: Roo
                         className="text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-lg px-2 py-1.5 text-neutral-700 dark:text-neutral-300"
                     >
                         {IMAGE_TYPES.map(type => (
-                            <option key={type} value={type}>{typeLabels[type]}</option>
+                            <option key={type} value={type}>{t(type.toLowerCase())}</option>
                         ))}
                     </select>
                     <button
@@ -177,7 +173,7 @@ export default function RoomImageManager({ images, roomId, onImagesChange }: Roo
                         className="flex items-center gap-1 text-xs font-bold bg-hotel-gold/20 text-hotel-gold hover:bg-hotel-gold/30 border border-hotel-gold/30 px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
                     >
                         <Upload size={12} />
-                        {uploading ? '...' : 'Upload'}
+                        {uploading ? t('uploading') : t('upload')}
                     </button>
                     <input
                         ref={fileInputRef}
@@ -191,7 +187,7 @@ export default function RoomImageManager({ images, roomId, onImagesChange }: Roo
 
             {images.length === 0 && (
                 <div className="text-center py-8 text-neutral-400 dark:text-neutral-600 text-sm">
-                    No booking images yet. Upload images by type for the alpaca site booking widget.
+                    {t('bookingImagesEmpty')}
                 </div>
             )}
 
@@ -203,7 +199,7 @@ export default function RoomImageManager({ images, roomId, onImagesChange }: Roo
                     <div key={type} className="space-y-2">
                         <div className="flex items-center gap-2">
                             <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${typeColorsLight[type]} dark:${typeColors[type]}`}>
-                                {typeLabels[type]}
+                                {t(type.toLowerCase())}
                             </span>
                             <span className="text-[10px] text-neutral-400">{items.length} image{items.length !== 1 ? 's' : ''}</span>
                         </div>
@@ -233,8 +229,8 @@ export default function RoomImageManager({ images, roomId, onImagesChange }: Roo
                                                 onChange={(e) => handleChangeType(img.id, e.target.value)}
                                                 className="text-[9px] bg-white/20 text-white border border-white/20 rounded px-1 py-0.5"
                                             >
-                                                {IMAGE_TYPES.map(t => (
-                                                    <option key={t} value={t} className="text-black">{typeLabels[t]}</option>
+                                                {IMAGE_TYPES.map(typeVal => (
+                                                    <option key={typeVal} value={typeVal} className="text-black">{t(typeVal.toLowerCase())}</option>
                                                 ))}
                                             </select>
                                             <button
