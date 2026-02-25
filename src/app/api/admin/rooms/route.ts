@@ -68,7 +68,7 @@ export async function GET() {
             include: {
                 media: true,
                 channelSettings: true,
-                roomImages: { orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }] },
+                images: { orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }] },
             }
         });
 

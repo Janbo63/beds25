@@ -464,7 +464,7 @@ export default function AdminSettings() {
 
                                         <div className="space-y-3 pt-3 border-t border-neutral-200 dark:border-white/5">
                                             <RoomImageManager
-                                                images={room.roomImages || []}
+                                                images={room.images || []}
                                                 roomId={room.id}
                                                 onImagesChange={() => {
                                                     fetch('/api/admin/rooms')
