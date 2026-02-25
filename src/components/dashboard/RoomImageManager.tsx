@@ -20,27 +20,24 @@ interface RoomImageManagerProps {
     onImagesChange: () => void;
 }
 
-const IMAGE_TYPES = ['HERO', 'GALLERY', 'THUMBNAIL', 'PROPERTY'] as const;
+const IMAGE_TYPES = ['HERO', 'GALLERY', 'THUMBNAIL'] as const;
 
 const typeLabels: Record<string, string> = {
     HERO: 'Hero',
     GALLERY: 'Gallery',
     THUMBNAIL: 'Thumbnail',
-    PROPERTY: 'Property',
 };
 
 const typeColors: Record<string, string> = {
     HERO: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     GALLERY: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
     THUMBNAIL: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-    PROPERTY: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
 };
 
 const typeColorsLight: Record<string, string> = {
     HERO: 'bg-amber-100 text-amber-700 border-amber-300',
     GALLERY: 'bg-blue-100 text-blue-700 border-blue-300',
     THUMBNAIL: 'bg-purple-100 text-purple-700 border-purple-300',
-    PROPERTY: 'bg-emerald-100 text-emerald-700 border-emerald-300',
 };
 
 export default function RoomImageManager({ images, roomId, onImagesChange }: RoomImageManagerProps) {

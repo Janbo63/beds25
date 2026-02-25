@@ -5,7 +5,7 @@ import { join } from 'path';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_TYPES = ['HERO', 'GALLERY', 'THUMBNAIL', 'PROPERTY'];
+const VALID_TYPES = ['HERO', 'GALLERY', 'THUMBNAIL'];
 
 /**
  * Upload a typed room image.
