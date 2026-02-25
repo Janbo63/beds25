@@ -67,7 +67,8 @@ export async function GET(request: NextRequest) {
                     source: b.source,
                     status: b.status,
                     totalPrice: b.totalPrice,
-                    externalId: b.externalId
+                    externalId: b.externalId,
+                    isPrivate: b.isPrivate
                 }))
             };
         });
