@@ -90,7 +90,7 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         Discount_Amount: booking.discountAmount,
         Source_Channel: booking.source,
         Currency1: booking.currency,
-        private: booking.isPrivate,
+        Private: booking.isPrivate,
     };
 
     if (contactId) {
