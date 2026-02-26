@@ -113,9 +113,9 @@ jobs:
 
             # Set up persistent storage for image uploads
             echo "🔒 Securing persistent upload directories..."
-            mkdir -p /var/www/beds25-uploads
+            mkdir -p /var/www/beds25/.persistent-uploads
             mkdir -p /var/www/beds25/public
-            ln -sfn /var/www/beds25-uploads /var/www/beds25/public/uploads
+            ln -sfn /var/www/beds25/.persistent-uploads /var/www/beds25/public/uploads
 
             # Clean stale build artifacts (prevents EACCES from root-owned .next/)
             echo "🧹 Cleaning stale build artifacts..."
