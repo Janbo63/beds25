@@ -28,7 +28,11 @@ export async function POST(request: NextRequest) {
         const buffer = Buffer.from(bytes);
 
         const uploadDir = join(process.cwd(), 'public', 'uploads');
-        await mkdir(uploadDir, { recursive: true });
+        try {
+            await mkdir(uploadDir, { recursive: true });
+        } catch (dirError: any) {
+            if (dirError.code !== 'EEXIST') throw dirError;
+        }
 
         const filename = `${crypto.randomUUID()}-${file.name}`;
         const path = join(uploadDir, filename);

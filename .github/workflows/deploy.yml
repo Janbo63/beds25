@@ -2,7 +2,7 @@ name: Deploy to Hostinger VPS
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -16,12 +16,12 @@ jobs:
       ZOHO_REFRESH_TOKEN: "dummy"
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Set Environment Variables
         run: |
@@ -29,7 +29,7 @@ jobs:
           echo "ZOHO_CLIENT_ID=dummy" >> $GITHUB_ENV
           echo "ZOHO_CLIENT_SECRET=dummy" >> $GITHUB_ENV
           echo "ZOHO_REFRESH_TOKEN=dummy" >> $GITHUB_ENV
-          
+
           # Also create .env file for tools that specifically look for it
           echo "DATABASE_URL=file:${{ github.workspace }}/ci.db" >> .env
           echo "ZOHO_CLIENT_ID=dummy" >> .env
@@ -44,25 +44,25 @@ jobs:
           cat .env
           echo "DATABASE_URL from env:"
           echo $DATABASE_URL
-          
+
       - name: Install dependencies
         run: npm install --legacy-peer-deps
-        
+
       - name: Generate Prisma client
         run: npx prisma generate
-        
+
       - name: Push Database Schema
         run: npx prisma db push
-        
+
       - name: Build application
         run: npm run build
-          
+
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
-        
+
       - name: Run Playwright tests
         run: npx playwright test
-        
+
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
@@ -76,56 +76,61 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    
-    steps:
-    - name: Deploy to Hostinger VPS
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.VPS_IP }}
-        username: beds25
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        port: 22
-        script: |
-          set -e
-          echo "🚀 Starting deployment..."
-          
-          # Navigate to app directory
-          cd /var/www/beds25
-          
-          # Ensure git safe.directory is set
-          git config --global --add safe.directory /var/www/beds25 2>/dev/null || true
-          
-          # Pull latest changes
-          echo "📥 Pulling latest code from GitHub..."
-          git pull origin main
-          
-          # Install dependencies
-          echo "📦 Installing dependencies..."
-          npm install --legacy-peer-deps
-          
-          # Generate Prisma client
-          echo "🔧 Generating Prisma client..."
-          npx prisma generate
-          
-          # Run database migrations
-          echo "🗄️  Applying database migrations..."
-          npx prisma db push --accept-data-loss
-          
-          # Clean stale build artifacts (prevents EACCES from root-owned .next/)
-          echo "🧹 Cleaning stale build artifacts..."
-          rm -rf .next
-          
-          # Build application
-          echo "🏗️  Building application..."
-          npm run build
-          
-          # Restart PM2 process
-          echo "♻️  Restarting application..."
-          pm2 restart beds25 || (fuser -k 3003/tcp 2>/dev/null; sleep 1; pm2 start node_modules/.bin/next --name "beds25" -- start -p 3003)
-          
-          # Save PM2 process list
-          pm2 save
-          
-          echo "✅ Deployment complete!"
-          echo "🌐 Application running on port 3003"
 
+    steps:
+      - name: Deploy to Hostinger VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: beds25
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            set -e
+            echo "🚀 Starting deployment..."
+
+            # Navigate to app directory
+            cd /var/www/beds25
+
+            # Ensure git safe.directory is set
+            git config --global --add safe.directory /var/www/beds25 2>/dev/null || true
+
+            # Pull latest changes
+            echo "📥 Pulling latest code from GitHub..."
+            git pull origin main
+
+            # Install dependencies
+            echo "📦 Installing dependencies..."
+            npm install --legacy-peer-deps
+
+            # Generate Prisma client
+            echo "🔧 Generating Prisma client..."
+            npx prisma generate
+
+            # Run database migrations
+            echo "🗄️  Applying database migrations..."
+            npx prisma db push --accept-data-loss
+
+            # Set up persistent storage for image uploads
+            echo "🔒 Securing persistent upload directories..."
+            mkdir -p /var/www/beds25-uploads
+            mkdir -p /var/www/beds25/public
+            ln -sfn /var/www/beds25-uploads /var/www/beds25/public/uploads
+
+            # Clean stale build artifacts (prevents EACCES from root-owned .next/)
+            echo "🧹 Cleaning stale build artifacts..."
+            rm -rf .next
+
+            # Build application
+            echo "🏗️  Building application..."
+            npm run build
+
+            # Restart PM2 process
+            echo "♻️  Restarting application..."
+            pm2 restart beds25 || (fuser -k 3003/tcp 2>/dev/null; sleep 1; pm2 start node_modules/.bin/next --name "beds25" -- start -p 3003)
+
+            # Save PM2 process list
+            pm2 save
+
+            echo "✅ Deployment complete!"
+            echo "🌐 Application running on port 3003"
