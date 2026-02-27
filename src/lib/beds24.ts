@@ -306,12 +306,29 @@ export async function updateBeds24Rates(roomId: string, date: string, price: num
         where: { rooms: { some: { id: roomId } } }
     });
 
-    if (!room || !property?.beds24InviteCode || !room.externalId) {
-        throw new Error('Room or Property not associated with Beds24');
+    if (!room || !room.externalId) {
+        throw new Error('Room not associated with Beds24 (missing externalId)');
     }
 
-    const auth = await getBeds24Token(property.beds24InviteCode);
-    const accessToken = auth.token;
+    if (!property?.beds24RefreshToken && !property?.beds24InviteCode) {
+        throw new Error('No Beds24 credentials found on property');
+    }
+
+    // Use stored refresh token (preferred) or fall back to invite code for initial setup
+    let accessToken: string;
+    if (property.beds24RefreshToken) {
+        accessToken = await getBeds24AccessToken(property.beds24RefreshToken);
+    } else {
+        const auth = await getBeds24Token(property.beds24InviteCode!);
+        accessToken = auth.token;
+        // Store the refresh token for future use
+        if (auth.refreshToken) {
+            await prisma.property.update({
+                where: { id: property.id },
+                data: { beds24RefreshToken: auth.refreshToken }
+            });
+        }
+    }
 
     const response = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar`, {
         method: 'POST',
@@ -344,23 +361,38 @@ export async function updateBeds24RatesBatch(roomId: string, updates: { date: st
         where: { rooms: { some: { id: roomId } } }
     });
 
-    if (!room || !property?.beds24InviteCode || !room.externalId) {
-        throw new Error('Room or Property not associated with Beds24');
+    if (!room || !room.externalId) {
+        throw new Error('Room not associated with Beds24 (missing externalId)');
     }
 
-    const auth = await getBeds24Token(property.beds24InviteCode);
-    const accessToken = auth.token;
+    if (!property?.beds24RefreshToken && !property?.beds24InviteCode) {
+        throw new Error('No Beds24 credentials found on property');
+    }
+
+    // Use stored refresh token (preferred) or fall back to invite code for initial setup
+    let accessToken: string;
+    if (property.beds24RefreshToken) {
+        accessToken = await getBeds24AccessToken(property.beds24RefreshToken);
+    } else {
+        const auth = await getBeds24Token(property.beds24InviteCode!);
+        accessToken = auth.token;
+        // Store the refresh token for future use
+        if (auth.refreshToken) {
+            await prisma.property.update({
+                where: { id: property.id },
+                data: { beds24RefreshToken: auth.refreshToken }
+            });
+        }
+    }
 
     // Beds24 API v2 /inventory/rooms/calendar accepts an array of updates
     const payload = updates.map(u => ({
-        roomId: parseInt(room.externalId!), // Verified existence above
+        roomId: parseInt(room.externalId!),
         startDate: u.date,
         endDate: u.date,
         price1: u.price
     }));
 
-    // Send in chunks of 50 to avoid payload limits if necessary, though API v2 is robust
-    // For now, we'll send all at once assuming reasonable range (e.g. 1 month = 30 items)
     const response = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar`, {
         method: 'POST',
         headers: {
