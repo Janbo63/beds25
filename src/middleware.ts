@@ -1,45 +1,63 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifySessionFromCookieHeader } from '@/lib/auth';
 
 /**
- * Minimal middleware — locale detection is handled by src/i18n/request.ts.
- * The next-intl createMiddleware was removed because localePrefix: 'never'
- * makes it effectively a no-op, and it caused webServer startup timeouts
- * in CI (Playwright).
+ * Middleware — Cookie-based session authentication
+ * 
+ * Replaces the previous HTTP Basic Auth with secure JWT cookie sessions.
+ * 
+ * Public routes (no auth required):
+ *   /api/public/*     — Booking widget, availability, rooms
+ *   /api/webhooks/*   — Stripe, Beds24 webhooks
+ *   /api/cron/*       — Vercel cron jobs (use CRON_SECRET)
+ *   /login            — Login page itself
+ *   /api/auth/*       — Auth endpoints
+ * 
+ * Protected routes (session cookie required):
+ *   /dashboard/*      — Admin dashboard
+ *   /api/admin/*      — Admin API endpoints
+ *   Everything else   — Protected by default
  */
-export function middleware(request: NextRequest) {
-    const url = request.nextUrl;
+export async function middleware(request: NextRequest) {
+    const { pathname } = request.nextUrl;
 
-    // Explicitly allow public APIs and webhooks to bypass authentication
-    if (url.pathname.startsWith('/api/public') || url.pathname.startsWith('/api/webhooks')) {
+    // ── Public routes — no auth needed ──
+    if (
+        pathname.startsWith('/api/public') ||
+        pathname.startsWith('/api/webhooks') ||
+        pathname.startsWith('/api/cron') ||
+        pathname.startsWith('/api/auth') ||
+        pathname === '/login'
+    ) {
         return NextResponse.next();
     }
 
-    // Require HTTP Basic Auth for all other routes
-    const basicAuth = request.headers.get('authorization');
+    // ── Check session cookie ──
+    const cookieHeader = request.headers.get('cookie');
+    const session = await verifySessionFromCookieHeader(cookieHeader);
 
-    if (basicAuth) {
-        const authValue = basicAuth.split(' ')[1];
-        const [user, pwd] = atob(authValue).split(':');
-
-        const validUser = process.env.ADMIN_USERNAME || 'admin';
-        const validPass = process.env.ADMIN_PASSWORD || 'alpaca2026';
-
-        if (user === validUser && pwd === validPass) {
-            return NextResponse.next();
-        }
+    if (session) {
+        // Valid session — allow through
+        return NextResponse.next();
     }
 
-    // Prompt for authentication
-    return new NextResponse('Authentication required', {
-        status: 401,
-        headers: {
-            'WWW-Authenticate': 'Basic realm="Beds25 Secure Area"',
-        },
-    });
+    // ── No valid session — redirect to login ──
+    // For API routes, return 401 JSON
+    if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+            { error: 'Authentication required' },
+            { status: 401 }
+        );
+    }
+
+    // For pages, redirect to login with return URL
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('from', pathname);
+    return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
     // Run on pages and API routes — skip Next.js internals and static files
-    matcher: ['/((?!_next|.*\\..*).*)']
+    matcher: ['/((?!_next|.*\\..*).*)', '/api/:path*'],
 };

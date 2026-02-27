@@ -165,29 +165,46 @@ export async function importBeds24Data(inviteCode: string, existingRefreshToken?
             // unless it has multiple units, which we will handle by mapping rt.rooms
             const units = rt.rooms && rt.rooms.length > 0 ? rt.rooms : [{ id: rt.id, name: rt.name }];
 
+            // Extract enriched fields from Beds24 room type
+            const roomDescription = rt.texts?.[0]?.roomDescription
+                || rt.texts?.[0]?.contentDescription
+                || null;
+            const amenitiesJson = rt.featureCodes && rt.featureCodes.length > 0
+                ? JSON.stringify(rt.featureCodes)
+                : null;
+
+            const enrichedFields = {
+                roomType: rt.roomType || null,
+                size: rt.roomSize ? parseFloat(rt.roomSize) : null,
+                sizeUnit: rt.roomSize ? 'sqm' : null,
+                minNights: rt.minStay ? parseInt(rt.minStay) : 1,
+                maxStay: rt.maxStay ? parseInt(rt.maxStay) : null,
+                maxOccupancy: rt.maxPeople ? parseInt(rt.maxPeople) : null,
+                quantity: rt.qty ? parseInt(rt.qty) : 1,
+                rackRate: rt.rackRate ? parseFloat(rt.rackRate) : null,
+                cleaningFee: rt.cleaningFee ? parseFloat(rt.cleaningFee) : null,
+                securityDeposit: rt.securityDeposit ? parseFloat(rt.securityDeposit) : null,
+                sortOrder: rt.sellPriority ? parseInt(rt.sellPriority) : 0,
+                amenities: amenitiesJson,
+                description: roomDescription,
+            };
+
             for (const unit of units) {
+                const baseFields = {
+                    number: unit.name || rt.name,
+                    name: rt.name,
+                    basePrice: parseFloat(rt.minPrice || '0'),
+                    capacity: parseInt(rt.maxPeople || '2'),
+                    maxAdults: parseInt(rt.maxAdult || rt.maxPeople || '2'),
+                    maxChildren: parseInt(rt.maxChildren || '0'),
+                    propertyId: property.id,
+                    externalId: unit.id?.toString(),
+                };
+
                 const room = await prisma.room.upsert({
                     where: { externalId: unit.id?.toString() },
-                    update: {
-                        number: unit.name || rt.name,
-                        name: rt.name,
-                        basePrice: parseFloat(rt.basePrice || '0'),
-                        capacity: parseInt(rt.maxPeople || '2'),
-                        maxAdults: parseInt(rt.maxAdults || rt.maxPeople || '2'),
-                        maxChildren: parseInt(rt.maxChildren || '0'),
-                        propertyId: property.id,
-                        externalId: unit.id?.toString()
-                    },
-                    create: {
-                        number: unit.name || rt.name,
-                        name: rt.name,
-                        basePrice: parseFloat(rt.basePrice || '0'),
-                        capacity: parseInt(rt.maxPeople || '2'),
-                        maxAdults: parseInt(rt.maxAdults || rt.maxPeople || '2'),
-                        maxChildren: parseInt(rt.maxChildren || '0'),
-                        propertyId: property.id,
-                        externalId: unit.id?.toString()
-                    }
+                    update: { ...baseFields, ...enrichedFields },
+                    create: { ...baseFields, ...enrichedFields },
                 });
                 results[results.length - 1].rooms.push(room.number);
             }

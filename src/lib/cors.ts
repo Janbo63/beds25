@@ -7,6 +7,8 @@ import { NextResponse } from 'next/server';
 const ALLOWED_ORIGINS = [
     'https://zagrodaalpakoterapii.com',
     'https://www.zagrodaalpakoterapii.com',
+    'https://admin.zagrodaalpakoterapii.com',
+    'https://bookings.zagrodaalpakoterapii.com', // Legacy — keep during transition
     'http://localhost:3000', // Local dev
     'http://localhost:3001',
 ];

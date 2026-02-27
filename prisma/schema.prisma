@@ -100,6 +100,16 @@ model Room {
   floor         String?
   viewType      String? // "sea", "mountain", "garden", "city", "pool"
 
+  // ── Fields synced from Beds24 API v2 ──────────────────────
+  maxStay         Int? // Maximum nights allowed
+  maxOccupancy    Int? // Total headcount cap (maxPeople from Beds24)
+  quantity        Int     @default(1) // Physical room count of this type
+  rackRate        Float? // Published rack rate (before discounts)
+  cleaningFee     Float? // One-time cleaning fee
+  securityDeposit Float? // Refundable security deposit
+  sortOrder       Int     @default(0) // Display priority (sellPriority from Beds24)
+  sizeUnit        String? @default("sqm") // "sqm" | "sqft"
+
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id])
 
