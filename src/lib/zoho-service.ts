@@ -158,6 +158,18 @@ export function mapRoomToZoho(room: any): ZohoRecord {
         BookingCom_Room_ID: room.bookingComRoomId,
         Airbnb_Room_ID: room.airbnbRoomId,
         Internal_Name: room.internalName,
+        // New fields from Beds24 sync
+        Max_Stay: room.maxStay,
+        Max_Occupancy: room.maxOccupancy,
+        Quantity: room.quantity,
+        Room_Size: room.size,
+        Size_Unit: room.sizeUnit,
+        Rack_Rate: room.rackRate,
+        Cleaning_Fee: room.cleaningFee,
+        Security_Deposit: room.securityDeposit,
+        Sort_Order: room.sortOrder,
+        Description: room.description,
+        Amenities: room.amenities,
     };
 }
 
