@@ -104,20 +104,27 @@ export async function POST(request: NextRequest) {
         );
 
         // 6. Sync with Beds24
+        let beds24SyncStatus = 'success';
+        let beds24SyncError = '';
         try {
             const beds24Updates = validUpdates.map(d => ({
                 date: format(d, 'yyyy-MM-dd'),
                 price: priceValue
             }));
             await updateBeds24RatesBatch(roomId, beds24Updates);
-        } catch (syncError) {
+        } catch (syncError: any) {
             console.error('Beds24 Batch Sync Warning:', syncError);
-            // We verify success of local DB, so we return success with warning if needed
+            beds24SyncStatus = 'failed';
+            beds24SyncError = syncError?.message || 'Unknown sync error';
         }
 
         return NextResponse.json({
-            message: 'Rates updated successfully',
+            message: beds24SyncStatus === 'success'
+                ? 'Rates updated and synced to Beds24!'
+                : `Rates saved locally but Beds24 sync failed: ${beds24SyncError}`,
             count: validUpdates.length,
+            beds24Sync: beds24SyncStatus,
+            beds24Error: beds24SyncError || undefined,
             updatedDates: validUpdates.map(d => format(d, 'yyyy-MM-dd'))
         });
 

@@ -75,7 +75,7 @@ export default function MassRateUpdateModal({ roomId, roomNumber, onClose, onSav
                 throw new Error(data.error || 'Failed to update rates');
             }
 
-            setSuccessMsg(`Successfully updated ${data.count} dates!`);
+            setSuccessMsg(data.message || `Successfully updated ${data.count} dates!`);
             setTimeout(() => {
                 onSave();
                 onClose();
