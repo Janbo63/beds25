@@ -91,6 +91,7 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         Source_Channel: booking.source,
         Currency1: booking.currency,
         Private: booking.isPrivate,
+        Booking_Status: booking.isPrivate ? 'Private' : (booking.status || 'Confirmed'),
     };
 
     if (contactId) {
