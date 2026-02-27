@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import {
     Calendar,
     BarChart3,
+    DollarSign,
     Settings,
     ChevronRight,
     ChevronLeft
@@ -47,6 +48,7 @@ export default function Sidebar() {
     const menuItems = [
         { icon: Calendar, label: t('tapeChart'), href: '/dashboard' },
         { icon: BarChart3, label: t('reports'), href: '/dashboard/reports' },
+        { icon: DollarSign, label: t('rates'), href: '/dashboard/rates' },
         { icon: Settings, label: t('settings'), href: '/dashboard/settings' },
     ];
 

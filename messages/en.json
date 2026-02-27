@@ -31,6 +31,7 @@
     "Sidebar": {
         "tapeChart": "Calendar & Rates",
         "reports": "Financial Reports",
+        "rates": "Pricing",
         "settings": "Management",
         "navigation": "Navigation",
         "status": "Status",
