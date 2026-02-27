@@ -12,10 +12,27 @@ test.describe('Room Lifecycle E2E', () => {
     const testRoomName = `[TEST] Playwright Room ${Date.now()}`;
 
     test('Create, Verify, and Delete a Room', async ({ page }) => {
-        // 1. Create a room via the Admin API
-        // We use the request context to hit the API directly for setup
+        // 0. Authenticate: get a session cookie via PIN login
         const apiContext = await request.newContext();
-        const createResponse = await apiContext.post('/api/admin/rooms', {
+        const loginResponse = await apiContext.post('/api/auth/login', {
+            data: { pin: process.env.ADMIN_PIN || '000000' }
+        });
+        expect(loginResponse.ok()).toBeTruthy();
+
+        // Extract session cookie from login response
+        const cookies = loginResponse.headers()['set-cookie'];
+        const sessionMatch = cookies?.match(/beds25_session=([^;]+)/);
+        expect(sessionMatch).toBeTruthy();
+
+        // Create a new context with the session cookie
+        const authedContext = await request.newContext({
+            extraHTTPHeaders: {
+                'Cookie': `beds25_session=${sessionMatch![1]}`
+            }
+        });
+
+        // 1. Create a room via the Admin API (now authenticated)
+        const createResponse = await authedContext.post('/api/admin/rooms', {
             data: {
                 number: 'PT-999',
                 name: testRoomName,
@@ -40,7 +57,7 @@ test.describe('Room Lifecycle E2E', () => {
         const checkOut = new Date();
         checkOut.setDate(checkOut.getDate() + 3); // 3 days later
 
-        const bookingResponse = await apiContext.post('/api/bookings', {
+        const bookingResponse = await authedContext.post('/api/bookings', {
             data: {
                 roomId: createdRoomId,
                 guestName: 'Playwright Test Guest',
@@ -59,17 +76,17 @@ test.describe('Room Lifecycle E2E', () => {
 
         // 4. Clean up: Delete the booking first
         if (createdBookingId) {
-            const deleteBookingResponse = await apiContext.delete(`/api/bookings?id=${createdBookingId}`);
+            const deleteBookingResponse = await authedContext.delete(`/api/bookings?id=${createdBookingId}`);
             expect(deleteBookingResponse.ok()).toBeTruthy();
             console.log(`Deleted test booking ID: ${createdBookingId}`);
         }
 
         // 5. Clean up: Delete the room via the Admin API
-        const deleteResponse = await apiContext.delete(`/api/admin/rooms?id=${createdRoomId}`);
+        const deleteResponse = await authedContext.delete(`/api/admin/rooms?id=${createdRoomId}`);
         expect(deleteResponse.ok()).toBeTruthy();
         console.log(`Deleted test room ID: ${createdRoomId}`);
 
-        // 4. Verify it's gone from the homepage
+        // 6. Verify it's gone from the homepage
         await page.reload();
         await expect(page.getByText(testRoomName)).not.toBeVisible();
     });
@@ -78,12 +95,24 @@ test.describe('Room Lifecycle E2E', () => {
     test.afterAll(async () => {
         const apiContext = await request.newContext();
 
-        if (createdBookingId) {
-            await apiContext.delete(`/api/bookings?id=${createdBookingId}`).catch(() => { });
-        }
+        // Get auth cookie for cleanup
+        const loginRes = await apiContext.post('/api/auth/login', {
+            data: { pin: process.env.ADMIN_PIN || '000000' }
+        });
+        const cookies = loginRes.headers()['set-cookie'];
+        const match = cookies?.match(/beds25_session=([^;]+)/);
 
-        if (createdRoomId) {
-            await apiContext.delete(`/api/admin/rooms?id=${createdRoomId}`).catch(() => { });
+        if (match) {
+            const authed = await request.newContext({
+                extraHTTPHeaders: { 'Cookie': `beds25_session=${match[1]}` }
+            });
+
+            if (createdBookingId) {
+                await authed.delete(`/api/bookings?id=${createdBookingId}`).catch(() => { });
+            }
+            if (createdRoomId) {
+                await authed.delete(`/api/admin/rooms?id=${createdRoomId}`).catch(() => { });
+            }
         }
     });
 });

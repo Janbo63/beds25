@@ -1,20 +1,19 @@
 
 import { test, expect } from '@playwright/test';
 
-test('has title', async ({ page }) => {
-    await page.goto('/');
-
-    // Expect a title "to contain" a substring.
-    // Note: Adjust the expected title based on your actual application title
-    // await expect(page).toHaveTitle(/Beds25/); 
-
-    // Alternatively, check for a key element on the homepage
-    // await expect(page.locator('h1')).toBeVisible();
+test('login page loads', async ({ page }) => {
+    await page.goto('/login');
+    // The login page should show the PIN input
+    await expect(page.locator('h1')).toContainText('Admin Access');
 });
 
-test('check dashboard loads', async ({ page }) => {
-    // Navigate to dashboard if accessible without login, or check login page
-    await page.goto('/login'); // Assuming there is a login page or similar
-    // Check if login form is present
-    // await expect(page.locator('form')).toBeVisible(); 
+test('unauthenticated access redirects to login', async ({ page }) => {
+    await page.goto('/dashboard');
+    // Should redirect to /login
+    await expect(page).toHaveURL(/\/login/);
+});
+
+test('public API is accessible without auth', async ({ request }) => {
+    const response = await request.get('/api/public/rooms');
+    expect(response.ok()).toBeTruthy();
 });
