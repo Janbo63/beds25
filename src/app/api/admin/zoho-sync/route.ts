@@ -82,10 +82,10 @@ export async function POST(request: NextRequest) {
 
         // Sync rooms
         if (entity === 'all' || entity === 'rooms') {
-            const roomsResponse = await roomService.syncFromZoho();
-            results.synced.rooms = roomsResponse.data.length;
-            results.debug = roomsResponse; // Return full debug info
-            // Add explicit success message if count is 0 to verify it ran
+            const roomsResponse: any = await roomService.syncFromZoho();
+            const roomData = roomsResponse?.data || [];
+            results.synced.rooms = Array.isArray(roomData) ? roomData.length : 0;
+            results.debug = roomsResponse;
             if (results.synced.rooms === 0) results.details = "Sync ran but found 0 rooms.";
         }
 
