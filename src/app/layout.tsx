@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Beds25 - Premium Hotel Management",
   description: "Modern hotel management system with Booking.com and Airbnb integration.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 import { NextIntlClientProvider } from 'next-intl';
