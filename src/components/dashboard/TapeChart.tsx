@@ -154,7 +154,10 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                     <div className="flex items-center gap-4">
                                         <div className="w-2.5 h-2.5 rounded-full bg-hotel-gold shadow-[0_0_10px_rgba(166,138,93,0.3)] group-hover:scale-125 transition-transform"></div>
                                         <div className="flex flex-col text-left">
-                                            <div className="text-lg text-neutral-800 dark:text-white font-black tracking-tight leading-tight">{room.internalName || room.name}</div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-lg text-neutral-800 dark:text-white font-black tracking-tight leading-tight">{room.internalName || room.name}</span>
+                                                <span className="text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Mass Rate Update">💰</span>
+                                            </div>
                                             <div className="text-[9px] text-neutral-500 font-bold uppercase tracking-[0.2em] mt-0.5">{room.number}</div>
                                         </div>
                                     </div>
