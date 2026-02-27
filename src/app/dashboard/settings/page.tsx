@@ -193,6 +193,49 @@ export default function AdminSettings() {
         }
     };
 
+    const handleBeds24Refresh = async () => {
+        setSyncing(true);
+        setSyncStatus(null);
+        try {
+            const res = await fetch('/api/admin/beds24/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inviteCode: 'REFRESH' })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setSyncStatus({ message: `Beds24 import complete: ${JSON.stringify(data.details)}`, type: 'success' });
+                loadRooms();
+            } else {
+                setSyncStatus({ message: data.error || 'Beds24 import failed', type: 'error' });
+            }
+        } catch (err) {
+            setSyncStatus({ message: 'An unexpected error occurred', type: 'error' });
+        } finally {
+            setSyncing(false);
+        }
+    };
+
+    const handleZohoPushRooms = async () => {
+        setSyncing(true);
+        setSyncStatus(null);
+        try {
+            const res = await fetch('/api/admin/zoho-sync?action=update_rooms', {
+                method: 'POST'
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setSyncStatus({ message: data.message || 'Rooms pushed to Zoho', type: 'success' });
+            } else {
+                setSyncStatus({ message: data.error || 'Push failed', type: 'error' });
+            }
+        } catch (err) {
+            setSyncStatus({ message: 'An unexpected error occurred', type: 'error' });
+        } finally {
+            setSyncing(false);
+        }
+    };
+
     const handleUploadMedia = async (file: File, roomId?: string) => {
         setUploading(true);
         const formData = new FormData();
@@ -561,7 +604,33 @@ export default function AdminSettings() {
                                     </div>
                                 )}
 
-                                {/* Sync Buttons */}
+                                {/* Data Sync Buttons */}
+                                <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-widest">Data Sync</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <button
+                                        onClick={handleBeds24Refresh}
+                                        disabled={syncing}
+                                        className={`px-6 py-4 rounded-xl font-bold transition-all shadow-lg ${syncing
+                                            ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 active:scale-95'
+                                            }`}
+                                    >
+                                        {syncing ? '⏳ Syncing...' : '📥 Refresh from Beds24'}
+                                    </button>
+                                    <button
+                                        onClick={handleZohoPushRooms}
+                                        disabled={syncing}
+                                        className={`px-6 py-4 rounded-xl font-bold transition-all shadow-lg ${syncing
+                                            ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'
+                                            : 'bg-green-600 hover:bg-green-500 text-white shadow-green-500/20 active:scale-95'
+                                            }`}
+                                    >
+                                        {syncing ? '⏳ Pushing...' : '📤 Push Rooms to Zoho'}
+                                    </button>
+                                </div>
+
+                                {/* Zoho CRM Sync Buttons */}
+                                <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-widest mt-6">Zoho CRM Pull</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <button
                                         onClick={() => handleZohoSync('all')}
