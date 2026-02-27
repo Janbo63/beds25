@@ -16,7 +16,7 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_IP }}
-          username: root
+          username: beds25
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
@@ -51,24 +51,16 @@ jobs:
             mkdir -p /var/www/beds25/public
             ln -sfn /var/www/beds25/.persistent-uploads /var/www/beds25/public/uploads
 
-            # Clean stale build artifacts (as root, no permission issues)
-            echo "🧹 Cleaning stale build artifacts..."
-            rm -rf .next
-
-            # Fix ownership so beds25 user owns everything
-            echo "🔑 Fixing file ownership..."
-            chown -R beds25:beds25 /var/www/beds25
-
-            # Build application as beds25 user
+            # Build application (no .next cleanup needed - Next.js handles incremental builds)
             echo "🏗️  Building application..."
-            su - beds25 -c "cd /var/www/beds25 && npm run build"
+            npm run build
 
-            # Restart PM2 as beds25 user
+            # Restart PM2 process
             echo "♻️  Restarting application..."
-            su - beds25 -c "pm2 restart beds25 || (fuser -k 3003/tcp 2>/dev/null; sleep 1; cd /var/www/beds25 && pm2 start node_modules/.bin/next --name beds25 -- start -p 3003)"
+            pm2 restart beds25 || (fuser -k 3003/tcp 2>/dev/null; sleep 1; pm2 start node_modules/.bin/next --name beds25 -- start -p 3003)
 
             # Save PM2 process list
-            su - beds25 -c "pm2 save"
+            pm2 save
 
             echo "✅ Deployment complete!"
             echo "🌐 Application running on port 3003"
