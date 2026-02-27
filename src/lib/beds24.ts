@@ -329,12 +329,14 @@ export async function updateBeds24Rates(roomId: string, date: string, price: num
         }
     }
 
-    // Look up Booking.com channel markup for this room
-    const channelSettings = await prisma.channelSettings.findUnique({
-        where: { channel_roomId: { channel: 'BOOKING.COM', roomId } }
+    // Look up or create Booking.com channel markup for this room
+    const channelSettings = await prisma.channelSettings.upsert({
+        where: { channel_roomId: { channel: 'BOOKING.COM', roomId } },
+        update: {},
+        create: { channel: 'BOOKING.COM', roomId, multiplier: 1.15, discount: 0 }
     });
-    const multiplier = channelSettings?.multiplier ?? 1;
-    const discount = channelSettings?.discount ?? 0;
+    const multiplier = channelSettings.multiplier;
+    const discount = channelSettings.discount;
     const adjustedPrice = Math.round((price * multiplier) - discount);
 
     console.log(`Beds24 price push: base=${price} × ${multiplier} - ${discount} = ${adjustedPrice}`);
@@ -392,12 +394,14 @@ export async function updateBeds24RatesBatch(roomId: string, updates: { date: st
         }
     }
 
-    // Look up Booking.com channel markup for this room
-    const channelSettings = await prisma.channelSettings.findUnique({
-        where: { channel_roomId: { channel: 'BOOKING.COM', roomId } }
+    // Look up or create Booking.com channel markup for this room
+    const channelSettings = await prisma.channelSettings.upsert({
+        where: { channel_roomId: { channel: 'BOOKING.COM', roomId } },
+        update: {},
+        create: { channel: 'BOOKING.COM', roomId, multiplier: 1.15, discount: 0 }
     });
-    const multiplier = channelSettings?.multiplier ?? 1;
-    const discount = channelSettings?.discount ?? 0;
+    const multiplier = channelSettings.multiplier;
+    const discount = channelSettings.discount;
 
     console.log(`Beds24 batch price push: multiplier=${multiplier}, discount=${discount}`);
 
