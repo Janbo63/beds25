@@ -44,6 +44,31 @@ export async function POST(request: NextRequest) {
             });
         }
 
+        if (action === 'update_rooms') {
+            // Update ALL existing rooms in Zoho with latest local data (including new Beds24 fields)
+            const localRooms = await prisma.room.findMany();
+            const zohoRooms = localRooms.filter(r => /^\d+$/.test(r.id)); // Only rooms with Zoho IDs
+
+            const updateResults = [];
+
+            for (const room of zohoRooms) {
+                const zohoData = mapRoomToZoho(room);
+
+                try {
+                    await zohoClient.updateRecord(ZOHO_MODULES.ROOMS, room.id, zohoData);
+                    updateResults.push({ id: room.id, name: room.name, status: 'updated' });
+                } catch (err: any) {
+                    updateResults.push({ id: room.id, name: room.name, error: err.message });
+                }
+            }
+
+            return NextResponse.json({
+                success: true,
+                message: `Updated ${updateResults.filter(r => r.status === 'updated').length}/${zohoRooms.length} rooms in Zoho.`,
+                details: updateResults
+            });
+        }
+
         const results: any = {
             success: true,
             synced: {}
