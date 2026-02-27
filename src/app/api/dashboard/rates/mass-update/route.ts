@@ -118,9 +118,15 @@ export async function POST(request: NextRequest) {
             beds24SyncError = syncError?.message || 'Unknown sync error';
         }
 
+        // Look up Booking.com markup for info message
+        const channelInfo = await prisma.channelSettings.findUnique({
+            where: { channel_roomId: { channel: 'BOOKING.COM', roomId } }
+        });
+        const markup = channelInfo?.multiplier ?? 1;
+
         return NextResponse.json({
             message: beds24SyncStatus === 'success'
-                ? 'Rates updated and synced to Beds24!'
+                ? `Rates updated and synced to Beds24!${markup !== 1 ? ` (Booking.com markup: ×${markup} = ${Math.round(priceValue * markup)} PLN)` : ''}`
                 : `Rates saved locally but Beds24 sync failed: ${beds24SyncError}`,
             count: validUpdates.length,
             beds24Sync: beds24SyncStatus,

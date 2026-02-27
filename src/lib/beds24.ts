@@ -329,6 +329,16 @@ export async function updateBeds24Rates(roomId: string, date: string, price: num
         }
     }
 
+    // Look up Booking.com channel markup for this room
+    const channelSettings = await prisma.channelSettings.findUnique({
+        where: { channel_roomId: { channel: 'BOOKING.COM', roomId } }
+    });
+    const multiplier = channelSettings?.multiplier ?? 1;
+    const discount = channelSettings?.discount ?? 0;
+    const adjustedPrice = Math.round((price * multiplier) - discount);
+
+    console.log(`Beds24 price push: base=${price} × ${multiplier} - ${discount} = ${adjustedPrice}`);
+
     // Correct Beds24 API v2 payload format: { roomId, calendar: [{ from, to, price1 }] }
     const response = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar`, {
         method: 'POST',
@@ -338,7 +348,7 @@ export async function updateBeds24Rates(roomId: string, date: string, price: num
         },
         body: JSON.stringify([{
             roomId: parseInt(room.externalId),
-            calendar: [{ from: date, to: date, price1: price }]
+            calendar: [{ from: date, to: date, price1: adjustedPrice }]
         }])
     });
 
@@ -382,12 +392,21 @@ export async function updateBeds24RatesBatch(roomId: string, updates: { date: st
         }
     }
 
+    // Look up Booking.com channel markup for this room
+    const channelSettings = await prisma.channelSettings.findUnique({
+        where: { channel_roomId: { channel: 'BOOKING.COM', roomId } }
+    });
+    const multiplier = channelSettings?.multiplier ?? 1;
+    const discount = channelSettings?.discount ?? 0;
+
+    console.log(`Beds24 batch price push: multiplier=${multiplier}, discount=${discount}`);
+
     // Correct Beds24 API v2 format: one entry per room with calendar array
-    // Each calendar entry has from/to/price1 (not startDate/endDate at top level)
+    // Apply Booking.com markup to each price
     const calendarEntries = updates.map(u => ({
         from: u.date,
         to: u.date,
-        price1: u.price
+        price1: Math.round((u.price * multiplier) - discount)
     }));
 
     const payload = [{
