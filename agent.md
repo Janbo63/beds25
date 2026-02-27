@@ -12,9 +12,11 @@ Beds25 is a **staff-facing booking management system** — not a customer-facing
 - Handle voucher codes and multi-property support
 
 ### Architecture
-- **Source of truth**: Zoho CRM (custom Bookings, Rooms, Vouchers, and Booking Admins modules)
+- **Source of truth for room attributes**: Beds24 API v2 (room types, sizes, amenities, descriptions, pricing)
+- **Source of truth for bookings/guests**: Zoho CRM (custom Bookings, Rooms, Vouchers modules)
 - **Local cache**: SQLite via Prisma — for fast dashboard reads
-- **Sync strategy**: Writes go to Zoho first, then local DB. Reads come from local cache.
+- **Sync strategy**: Beds24 → local DB → Zoho CRM → Public APIs. Writes go to Zoho first, then local DB.
+- **Authentication**: PIN-based login with JWT cookie sessions (30-day expiry, HttpOnly)
 
 ## Key Decisions
 
@@ -29,9 +31,11 @@ Beds25 is a **staff-facing booking management system** — not a customer-facing
 - **Framework**: Next.js 16 + React + TypeScript
 - **Styling**: Tailwind CSS
 - **Database**: SQLite (Prisma ORM) + Zoho CRM REST API v6
+- **Auth**: `jose` JWT + HttpOnly cookies (PIN login)
+- **APIs**: Beds24 API v2, Zoho CRM v6, Stripe
 - **Deployment**: Hostinger VPS, port 3003, PM2 process
 - **CI/CD**: GitHub Actions (repo: `Janbo63/beds25`)
-- **Domain**: `bookings.zagrodaalpakoterapii.com` (Caddy reverse proxy → port 3003)
+- **Domain**: `admin.zagrodaalpakoterapii.com` (Caddy reverse proxy → port 3003)
 
 ## Zoho CRM Modules
 
@@ -46,16 +50,19 @@ Beds25 is a **staff-facing booking management system** — not a customer-facing
 ## Current State
 
 - ✅ Core booking CRUD (create, update via Zoho)
-- ✅ Room management with constraints
+- ✅ Room management with Beds24 attribute sync (13 enriched fields)
+- ✅ PIN-based admin auth (cookie sessions, 30-day expiry)
 - ✅ iCal sync for Airbnb/Booking.com
 - ✅ Guest management linked to Zoho Contacts
 - ✅ Pricing rules (per-date overrides)
 - ✅ Channel settings (commission multipliers)
 - ✅ Voucher code system
+- ✅ Stripe payments (deposit + balance charges)
+- ✅ Admin subdomain: `admin.zagrodaalpakoterapii.com`
 - ✅ PM2 deployment to Hostinger (port 3003)
 - ✅ GitHub Actions CI/CD pipeline
-- ⬜ Domain assignment (bookings subdomain pending)
-- ⬜ Production Zoho API keys (currently using test credentials)
+- ⬜ Zoho room push: `mapRoomToZoho` needs new fields
+- ⬜ Playwright tests: need updating for cookie auth (currently skipped in CI)
 
 ## Cross-Project Links
 
@@ -90,10 +97,13 @@ Beds25 is a **staff-facing booking management system** — not a customer-facing
 
 | File | Purpose |
 |---|---|
+| `src/lib/auth.ts` | JWT session utilities (PIN validation, cookie management) |
+| `src/lib/beds24.ts` | Beds24 API client + room attribute import |
 | `src/lib/zoho.ts` | Zoho API client (OAuth, HTTP, token refresh) |
 | `src/lib/zoho-service.ts` | Business logic, data mapping, sync orchestration |
+| `src/lib/cors.ts` | CORS config (admin.*, bookings.*, localhost) |
 | `src/lib/prisma.ts` | Prisma client singleton |
-| `src/lib/ical-import.ts` | iCal feed import + parse |
-| `prisma/schema.prisma` | 10 models: Organization, Property, Room, Guest, Booking, PriceRule, IcalSync, ChannelSettings, VoucherCode, VoucherRedemption |
-| `scripts/hostinger-setup.sh` | One-time server provisioning |
-| `ecosystem.config.js` | PM2 process configuration |
+| `src/middleware.ts` | Auth middleware (cookie session check) |
+| `src/app/login/page.tsx` | PIN login page (iPad-friendly) |
+| `prisma/schema.prisma` | 10+ models including enriched Room fields |
+| `scripts/inspect-beds24-rooms.js` | Diagnostic: raw Beds24 API room data |
