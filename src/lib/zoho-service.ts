@@ -270,13 +270,32 @@ export const bookingService = {
      */
     async update(id: string, updates: any) {
         // Fetch existing from local DB to merge for Zoho payload
-        const existing = await prisma.booking.findUnique({ where: { id } });
+        const existing = await prisma.booking.findUnique({
+            where: { id },
+            include: { room: true }
+        });
         if (!existing) throw new Error('Booking not found');
         const merged = { ...existing, ...updates };
 
-        // 1. Update in Zoho CRM
-        const zohoData = mapBookingToZoho(merged);
-        await zohoClient.updateRecord(ZOHO_MODULES.BOOKINGS, id, zohoData);
+        // 1. Sync to Zoho CRM
+        // Zoho IDs are 18+ digit numeric strings; Beds24 IDs are shorter
+        const isZohoId = /^\d{15,}$/.test(id);
+        if (process.env.ZOHO_CLIENT_ID !== 'dummy') {
+            try {
+                const zohoData = mapBookingToZoho(merged);
+                if (isZohoId) {
+                    // Booking exists in Zoho — update it
+                    await zohoClient.updateRecord(ZOHO_MODULES.BOOKINGS, id, zohoData);
+                } else {
+                    // Beds24-imported booking — create in Zoho on first edit
+                    console.log(`[ZohoService] Booking ${id} not in Zoho, creating...`);
+                    const zohoRecord = await zohoClient.createRecord(ZOHO_MODULES.BOOKINGS, zohoData);
+                    console.log(`[ZohoService] Created Zoho record ${zohoRecord.id} for Beds24 booking ${id}`);
+                }
+            } catch (error) {
+                console.warn(`[ZohoService] Zoho sync failed for booking ${id}, continuing with local update:`, error);
+            }
+        }
 
         // 2. Sync to local database
         const localBooking = await prisma.booking.update({
