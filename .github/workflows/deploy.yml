@@ -121,9 +121,9 @@ jobs:
             mkdir -p /var/www/beds25/public
             ln -sfn /var/www/beds25/.persistent-uploads /var/www/beds25/public/uploads
 
-            # Clean stale build artifacts (prevents EACCES from root-owned .next/)
+            # Clean stale build artifacts (ignore permission errors on root-owned cache files)
             echo "🧹 Cleaning stale build artifacts..."
-            rm -rf .next
+            rm -rf .next 2>/dev/null || true
 
             # Build application
             echo "🏗️  Building application..."
