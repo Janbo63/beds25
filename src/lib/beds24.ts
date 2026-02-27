@@ -321,7 +321,6 @@ export async function updateBeds24Rates(roomId: string, date: string, price: num
     } else {
         const auth = await getBeds24Token(property.beds24InviteCode!);
         accessToken = auth.token;
-        // Store the refresh token for future use
         if (auth.refreshToken) {
             await prisma.property.update({
                 where: { id: property.id },
@@ -330,6 +329,7 @@ export async function updateBeds24Rates(roomId: string, date: string, price: num
         }
     }
 
+    // Correct Beds24 API v2 payload format: { roomId, calendar: [{ from, to, price1 }] }
     const response = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar`, {
         method: 'POST',
         headers: {
@@ -338,9 +338,7 @@ export async function updateBeds24Rates(roomId: string, date: string, price: num
         },
         body: JSON.stringify([{
             roomId: parseInt(room.externalId),
-            startDate: date,
-            endDate: date,
-            price1: price
+            calendar: [{ from: date, to: date, price1: price }]
         }])
     });
 
@@ -376,7 +374,6 @@ export async function updateBeds24RatesBatch(roomId: string, updates: { date: st
     } else {
         const auth = await getBeds24Token(property.beds24InviteCode!);
         accessToken = auth.token;
-        // Store the refresh token for future use
         if (auth.refreshToken) {
             await prisma.property.update({
                 where: { id: property.id },
@@ -385,13 +382,18 @@ export async function updateBeds24RatesBatch(roomId: string, updates: { date: st
         }
     }
 
-    // Beds24 API v2 /inventory/rooms/calendar accepts an array of updates
-    const payload = updates.map(u => ({
-        roomId: parseInt(room.externalId!),
-        startDate: u.date,
-        endDate: u.date,
+    // Correct Beds24 API v2 format: one entry per room with calendar array
+    // Each calendar entry has from/to/price1 (not startDate/endDate at top level)
+    const calendarEntries = updates.map(u => ({
+        from: u.date,
+        to: u.date,
         price1: u.price
     }));
+
+    const payload = [{
+        roomId: parseInt(room.externalId!),
+        calendar: calendarEntries
+    }];
 
     const response = await fetch(`${BEDS24_API_URL}/inventory/rooms/calendar`, {
         method: 'POST',
