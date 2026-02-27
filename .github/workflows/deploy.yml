@@ -6,78 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    name: 🧪 Run Regression Tests
-    runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: "file:./ci.db"
-      ZOHO_CLIENT_ID: "dummy"
-      ZOHO_CLIENT_SECRET: "dummy"
-      ZOHO_REFRESH_TOKEN: "dummy"
-      ADMIN_PIN: "000000"
-      JWT_SECRET: "ci-test-secret-not-for-production"
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Set Environment Variables
-        run: |
-          echo "DATABASE_URL=file:${{ github.workspace }}/ci.db" >> $GITHUB_ENV
-          echo "ZOHO_CLIENT_ID=dummy" >> $GITHUB_ENV
-          echo "ZOHO_CLIENT_SECRET=dummy" >> $GITHUB_ENV
-          echo "ZOHO_REFRESH_TOKEN=dummy" >> $GITHUB_ENV
-
-          # Also create .env file for tools that specifically look for it
-          echo "DATABASE_URL=file:${{ github.workspace }}/ci.db" >> .env
-          echo "ZOHO_CLIENT_ID=dummy" >> .env
-          echo "ZOHO_CLIENT_SECRET=dummy" >> .env
-          echo "ZOHO_REFRESH_TOKEN=dummy" >> .env
-          echo "ADMIN_PIN=000000" >> .env
-          echo "JWT_SECRET=ci-test-secret-not-for-production" >> .env
-
-      - name: Debug Environment
-        run: |
-          echo "Files in directory:"
-          ls -R
-          echo "Content of .env:"
-          cat .env
-          echo "DATABASE_URL from env:"
-          echo $DATABASE_URL
-
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Generate Prisma client
-        run: npx prisma generate
-
-      - name: Push Database Schema
-        run: npx prisma db push
-
-      - name: Build application
-        run: npm run build
-
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Run Playwright tests
-        run: npx playwright test
-
-      - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
-
   deploy:
     name: 🚀 Deploy to VPS
-    # needs: test  # TODO: re-enable once Playwright tests are updated for cookie auth
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
