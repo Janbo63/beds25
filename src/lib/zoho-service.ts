@@ -325,9 +325,14 @@ export const bookingService = {
             }
         }
 
-        // 1. Delete from Zoho CRM (Skip if in CI)
-        if (process.env.ZOHO_CLIENT_ID !== 'dummy') {
-            await zohoClient.deleteRecord(ZOHO_MODULES.BOOKINGS, id);
+        // 1. Delete from Zoho CRM (only if the ID is a valid Zoho record ID)
+        const isZohoId = /^\d{15,}$/.test(id);
+        if (isZohoId && process.env.ZOHO_CLIENT_ID !== 'dummy') {
+            try {
+                await zohoClient.deleteRecord(ZOHO_MODULES.BOOKINGS, id);
+            } catch (err) {
+                console.warn(`[ZohoService] Zoho delete failed for booking ${id}, continuing with local delete:`, err);
+            }
         }
 
         // 2. Delete from local database
