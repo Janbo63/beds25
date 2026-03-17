@@ -510,15 +510,14 @@ export async function createBeds24Booking(bookingData: any) {
     return beds24Id;
 }
 
-export async function cancelBeds24Booking(bookingId: string, inviteCode?: string) {
+export async function cancelBeds24Booking(bookingId: string, refreshToken?: string) {
     let token = '';
 
-    if (inviteCode) {
-        const auth = await getBeds24Token(inviteCode);
-        token = auth.token;
+    if (refreshToken) {
+        token = await getBeds24AccessToken(refreshToken);
     } else {
-        const prop = await prisma.property.findFirst({ where: { beds24InviteCode: { not: null } } });
-        if (!prop?.beds24InviteCode) {
+        const prop = await prisma.property.findFirst({ where: { beds24RefreshToken: { not: null } } });
+        if (!prop?.beds24RefreshToken) {
             await prisma.webhookLog.create({
                 data: {
                     direction: 'OUTGOING', source: 'BEDS24', event: 'BOOKING_CANCEL', status: 'ERROR',
@@ -527,8 +526,7 @@ export async function cancelBeds24Booking(bookingId: string, inviteCode?: string
             }).catch(() => { });
             throw new Error('No Beds24 credentials found');
         }
-        const auth = await getBeds24Token(prop.beds24InviteCode);
-        token = auth.token;
+        token = await getBeds24AccessToken(prop.beds24RefreshToken);
     }
 
     const payload = [{ id: parseInt(bookingId), status: 'cancelled' }];

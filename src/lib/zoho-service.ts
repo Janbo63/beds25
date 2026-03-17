@@ -319,7 +319,7 @@ export const bookingService = {
         if (booking?.externalId) {
             console.log(`[ZohoService] Cancelling Beds24 booking ${booking.externalId}...`);
             try {
-                await cancelBeds24Booking(booking.externalId, booking.room?.property?.beds24InviteCode || undefined);
+                await cancelBeds24Booking(booking.externalId, booking.room?.property?.beds24RefreshToken || undefined);
             } catch (err) {
                 console.error('[ZohoService] Failed to cancel in Beds24:', err);
             }
