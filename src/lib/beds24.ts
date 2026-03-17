@@ -444,18 +444,18 @@ export async function createBeds24Booking(bookingData: any) {
         where: { rooms: { some: { id: bookingData.roomId } } }
     });
 
-    if (!room || !property?.beds24InviteCode || !room.externalId) {
+    if (!room || !property?.beds24RefreshToken || !room.externalId) {
         await prisma.webhookLog.create({
             data: {
                 direction: 'OUTGOING', source: 'BEDS24', event: 'BOOKING_CREATE', status: 'SKIPPED',
                 roomId: bookingData.roomId,
-                error: 'Room or Property not associated with Beds24 (missing invite code or externalId)'
+                error: 'Room or Property not associated with Beds24 (missing refresh token or externalId)'
             }
         }).catch(() => { });
         throw new Error('Room or Property not associated with Beds24');
     }
 
-    const auth = await getBeds24Token(property.beds24InviteCode);
+    const accessToken = await getBeds24AccessToken(property.beds24RefreshToken);
 
     const payload = [{
         roomId: parseInt(room.externalId),
@@ -475,7 +475,7 @@ export async function createBeds24Booking(bookingData: any) {
     const response = await fetch(`${BEDS24_API_URL}/bookings`, {
         method: 'POST',
         headers: {
-            'token': auth.token,
+            'token': accessToken,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
