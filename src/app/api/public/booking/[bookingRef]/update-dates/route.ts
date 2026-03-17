@@ -98,18 +98,6 @@ export async function POST(
                         }]),
                     });
                     beds24Updated = res.ok;
-                } else if (property?.beds24InviteCode) {
-                    const auth = await getBeds24Token(property.beds24InviteCode);
-                    const res = await fetch('https://beds24.com/api/v2/bookings', {
-                        method: 'POST',
-                        headers: { token: auth.token, 'Content-Type': 'application/json' },
-                        body: JSON.stringify([{
-                            id: parseInt(booking.externalId),
-                            arrival: format(newCheckIn, 'yyyy-MM-dd'),
-                            departure: format(newCheckOut, 'yyyy-MM-dd'),
-                        }]),
-                    });
-                    beds24Updated = res.ok;
                 }
             } catch (err) {
                 console.error('[UpdateDates] Beds24 update failed (non-fatal):', err);

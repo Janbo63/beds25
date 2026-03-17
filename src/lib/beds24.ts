@@ -310,24 +310,11 @@ export async function updateBeds24Rates(roomId: string, date: string, price: num
         throw new Error('Room not associated with Beds24 (missing externalId)');
     }
 
-    if (!property?.beds24RefreshToken && !property?.beds24InviteCode) {
-        throw new Error('No Beds24 credentials found on property');
+    if (!property?.beds24RefreshToken) {
+        throw new Error('No Beds24 credentials found on property (missing refresh token)');
     }
 
-    // Use stored refresh token (preferred) or fall back to invite code for initial setup
-    let accessToken: string;
-    if (property.beds24RefreshToken) {
-        accessToken = await getBeds24AccessToken(property.beds24RefreshToken);
-    } else {
-        const auth = await getBeds24Token(property.beds24InviteCode!);
-        accessToken = auth.token;
-        if (auth.refreshToken) {
-            await prisma.property.update({
-                where: { id: property.id },
-                data: { beds24RefreshToken: auth.refreshToken }
-            });
-        }
-    }
+    const accessToken = await getBeds24AccessToken(property.beds24RefreshToken);
 
     // Look up or create Booking.com channel markup for this room
     const channelSettings = await prisma.channelSettings.upsert({
@@ -375,24 +362,11 @@ export async function updateBeds24RatesBatch(roomId: string, updates: { date: st
         throw new Error('Room not associated with Beds24 (missing externalId)');
     }
 
-    if (!property?.beds24RefreshToken && !property?.beds24InviteCode) {
-        throw new Error('No Beds24 credentials found on property');
+    if (!property?.beds24RefreshToken) {
+        throw new Error('No Beds24 credentials found on property (missing refresh token)');
     }
 
-    // Use stored refresh token (preferred) or fall back to invite code for initial setup
-    let accessToken: string;
-    if (property.beds24RefreshToken) {
-        accessToken = await getBeds24AccessToken(property.beds24RefreshToken);
-    } else {
-        const auth = await getBeds24Token(property.beds24InviteCode!);
-        accessToken = auth.token;
-        if (auth.refreshToken) {
-            await prisma.property.update({
-                where: { id: property.id },
-                data: { beds24RefreshToken: auth.refreshToken }
-            });
-        }
-    }
+    const accessToken = await getBeds24AccessToken(property.beds24RefreshToken);
 
     // Look up or create Booking.com channel markup for this room
     const channelSettings = await prisma.channelSettings.upsert({

@@ -6,23 +6,24 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
     try {
-        let { inviteCode } = await request.json();
+        let { refreshToken } = await request.json();
 
-        if (inviteCode === 'REFRESH') {
+        // If explicitly asked to refresh from stored DB token
+        if (refreshToken === 'REFRESH') {
             const property = await prisma.property.findFirst({
-                where: { beds24InviteCode: { not: null } }
+                where: { beds24RefreshToken: { not: null } }
             });
-            if (!property?.beds24InviteCode) {
+            if (!property?.beds24RefreshToken) {
                 return NextResponse.json({ error: 'No stored credentials found' }, { status: 400 });
             }
-            inviteCode = property.beds24InviteCode;
+            refreshToken = property.beds24RefreshToken;
         }
 
-        if (!inviteCode) {
-            return NextResponse.json({ error: 'Invite Code is required' }, { status: 400 });
+        if (!refreshToken) {
+            return NextResponse.json({ error: 'Refresh Token is required' }, { status: 400 });
         }
 
-        const results = await importBeds24Data(inviteCode);
+        const results = await importBeds24Data(refreshToken);
 
         return NextResponse.json({
             message: 'Import completed successfully',

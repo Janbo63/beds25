@@ -27,12 +27,12 @@ export async function GET() {
             select: { id: true, name: true, number: true, externalId: true }
         }),
         prisma.property.findMany({
-            select: { id: true, name: true, externalId: true, beds24InviteCode: true }
+            select: { id: true, name: true, externalId: true, beds24RefreshToken: true }
         }),
         prisma.webhookLog.count()
     ]);
 
-    const hasBeds24Credentials = properties.some(p => p.beds24InviteCode);
+    const hasBeds24Credentials = properties.some(p => p.beds24RefreshToken);
 
     return NextResponse.json({
         status: 'preview',
@@ -55,7 +55,7 @@ export async function GET() {
             properties: properties.map(p => ({
                 name: p.name,
                 beds24Id: p.externalId,
-                hasCredentials: !!p.beds24InviteCode
+                hasCredentials: !!p.beds24RefreshToken
             })),
             webhookLogCount: webhookLogs,
             hasBeds24Credentials,
@@ -87,10 +87,10 @@ export async function POST(request: NextRequest) {
 
         // Find a property with Beds24 credentials
         const property = await prisma.property.findFirst({
-            where: { beds24InviteCode: { not: null } }
+            where: { beds24RefreshToken: { not: null } }
         });
 
-        if (!property?.beds24InviteCode) {
+        if (!property?.beds24RefreshToken) {
             return NextResponse.json({
                 error: 'No property with Beds24 credentials found. Run the Beds24 import first.'
             }, { status: 400 });
@@ -113,11 +113,8 @@ export async function POST(request: NextRequest) {
             };
         }
 
-        // Step 2: Full import from Beds24 (use refresh token if available, else fall back to invite code)
-        const importResult = await importBeds24Data(
-            property.beds24InviteCode,
-            property.beds24RefreshToken ?? undefined
-        );
+        // Step 2: Full import from Beds24 
+        const importResult = await importBeds24Data(property.beds24RefreshToken);
         results.import = importResult;
 
         // Step 3: Count final state

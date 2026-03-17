@@ -31,7 +31,7 @@ export default function AdminSettings() {
         airbnbUrl: '',
         bookingUrl: ''
     });
-    const [beds24InviteCode, setBeds24InviteCode] = useState('');
+    const [beds24RefreshToken, setBeds24RefreshToken] = useState('');
     const [importing, setImporting] = useState(false);
     const [importStatus, setImportStatus] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -95,7 +95,7 @@ export default function AdminSettings() {
             const res = await fetch('/api/admin/beds24/import', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ inviteCode: beds24InviteCode })
+                body: JSON.stringify({ refreshToken: beds24RefreshToken })
             });
             const data = await res.json();
             if (res.ok) {
@@ -708,8 +708,8 @@ export default function AdminSettings() {
                                     type="text"
                                     placeholder={t('inviteCodePlaceholder')}
                                     className={inputClass + " flex-1 rounded-xl p-4"}
-                                    value={beds24InviteCode}
-                                    onChange={e => setBeds24InviteCode(e.target.value)}
+                                    value={beds24RefreshToken}
+                                    onChange={e => setBeds24RefreshToken(e.target.value)}
                                     required
                                 />
                                 <button
