@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { format, addDays, isSameDay, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { enUS, pl } from 'date-fns/locale';
 import { useTranslations, useLocale } from 'next-intl';
 import BookingModal from './BookingModal';
@@ -163,66 +163,98 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                     </div>
                                 </td>
                                 {data.days.map((day: string) => {
-                                    const booking = room.bookings.find((b: any) => {
+                                    // Find a booking that SPANS this day (check-in <= day < check-out)
+                                    const stayBooking = room.bookings.find((b: any) => {
                                         const bCheckIn = typeof b.checkIn === 'string' ? b.checkIn.slice(0, 10) : format(new Date(b.checkIn), 'yyyy-MM-dd');
                                         const bCheckOut = typeof b.checkOut === 'string' ? b.checkOut.slice(0, 10) : format(new Date(b.checkOut), 'yyyy-MM-dd');
                                         return (day >= bCheckIn && day < bCheckOut);
                                     });
 
+                                    // Find a booking that CHECKS OUT on this day (right-half overlap)
+                                    const departingBooking = room.bookings.find((b: any) => {
+                                        const bCheckOut = typeof b.checkOut === 'string' ? b.checkOut.slice(0, 10) : format(new Date(b.checkOut), 'yyyy-MM-dd');
+                                        return day === bCheckOut;
+                                    });
+
                                     const isToday = day === todayStr;
 
-                                    // Use simple string slicing to avoid timezone issues with parseISO/format
-                                    const checkInStr = booking ? (typeof booking.checkIn === 'string' ? booking.checkIn.slice(0, 10) : format(new Date(booking.checkIn), 'yyyy-MM-dd')) : '';
-                                    const checkOutStr = booking ? (typeof booking.checkOut === 'string' ? booking.checkOut.slice(0, 10) : format(new Date(booking.checkOut), 'yyyy-MM-dd')) : '';
+                                    // Helper to get check-in/check-out strings
+                                    const getDateStr = (b: any, field: 'checkIn' | 'checkOut') =>
+                                        typeof b[field] === 'string' ? b[field].slice(0, 10) : format(new Date(b[field]), 'yyyy-MM-dd');
 
-                                    // Compute the day AFTER the current cell
-                                    const nextDay = format(addDays(new Date(day + 'T12:00:00'), 1), 'yyyy-MM-dd');
+                                    // Stay booking metadata
+                                    const stayCheckIn = stayBooking ? getDateStr(stayBooking, 'checkIn') : '';
+                                    const stayCheckOut = stayBooking ? getDateStr(stayBooking, 'checkOut') : '';
+                                    const isCheckInDay = stayBooking && day === stayCheckIn;
 
-                                    const isFirstDay = booking && day === checkInStr;
-                                    const isLastDay = booking && nextDay === checkOutStr;
-                                    const isSingleDay = isFirstDay && isLastDay;
-
+                                    // Departing booking metadata 
+                                    const departCheckIn = departingBooking ? getDateStr(departingBooking, 'checkIn') : '';
+                                    const departCheckOut = departingBooking ? getDateStr(departingBooking, 'checkOut') : '';
 
                                     // Get price for this date
                                     const roomPrice = room.prices?.[day]?.price || room.basePrice;
                                     const isEditing = editingCell?.roomId === room.id && editingCell?.date === day;
 
-                                    // Compute booking block inline styles for seamless pill shape
-                                    const bookingStyle: React.CSSProperties = booking ? {
-                                        position: 'absolute',
-                                        top: '6px',
-                                        bottom: '6px',
-                                        left: isSingleDay ? '3px' : isFirstDay ? '3px' : '-1px',
-                                        right: isSingleDay ? '3px' : isLastDay ? '3px' : '-1px',
-                                        borderRadius: isSingleDay ? '9999px' :
-                                            isFirstDay ? '9999px 0 0 9999px' :
-                                                isLastDay ? '0 9999px 9999px 0' : '0',
-                                        zIndex: 10,
-                                    } : {};
+                                    // Determine if NEITHER booking covers this cell
+                                    const hasAnyBooking = stayBooking || departingBooking;
 
-                                    // Color classes for booking blocks
-                                    const bookingColorClass = booking ? (
-                                        booking.isPrivate ? 'bg-fuchsia-800 text-white' :
-                                            booking.status === 'BLOCKED' ? 'bg-neutral-800 text-neutral-500' :
-                                                booking.status === 'CANCELLED' ? 'bg-rose-900/40 text-rose-400' :
-                                                    booking.status === 'REQUEST' ? 'bg-amber-600 text-white' :
-                                                        booking.source?.toUpperCase() === 'AIRBNB' ? 'bg-[#FF5A5F] text-white' :
-                                                            booking.source?.toUpperCase().includes('BOOKING') ? 'bg-[#003580] text-white' :
+                                    // Color function for booking blocks
+                                    const getBookingColor = (b: any) => (
+                                        b.isPrivate ? 'bg-fuchsia-800 text-white' :
+                                            b.status === 'BLOCKED' ? 'bg-neutral-800 text-neutral-500' :
+                                                b.status === 'CANCELLED' ? 'bg-rose-900/40 text-rose-400' :
+                                                    b.status === 'REQUEST' ? 'bg-amber-600 text-white' :
+                                                        b.source?.toUpperCase() === 'AIRBNB' ? 'bg-[#FF5A5F] text-white' :
+                                                            b.source?.toUpperCase().includes('BOOKING') ? 'bg-[#003580] text-white' :
                                                                 'bg-alpaca-green text-white'
-                                    ) : '';
+                                    );
+
+                                    // Compute center day for label rendering
+                                    const getCenterInfo = (b: any, bCheckIn: string, bCheckOut: string) => {
+                                        const checkInDate = new Date(bCheckIn + 'T12:00:00');
+                                        const checkOutDate = new Date(bCheckOut + 'T12:00:00');
+                                        const numNights = Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (24 * 60 * 60 * 1000));
+                                        const currentDate = new Date(day + 'T12:00:00');
+                                        const dayIndex = Math.round((currentDate.getTime() - checkInDate.getTime()) / (24 * 60 * 60 * 1000));
+                                        const centerIndex = Math.floor((numNights - 1) / 2);
+                                        return { isCenterDay: dayIndex === centerIndex, numNights };
+                                    };
+
+                                    // Booking label renderer
+                                    const renderBookingLabel = (b: any) => (
+                                        <div className="sticky left-0 right-0 flex flex-col items-center gap-1 w-full px-2 overflow-visible whitespace-nowrap">
+                                            <div className="flex items-center gap-1.5 opacity-90">
+                                                <span className="scale-110">{
+                                                    b.isPrivate ? '🤫' :
+                                                        b.status === 'BLOCKED' ? '🔒' :
+                                                            b.source?.toUpperCase() === 'AIRBNB' ? '🏠' :
+                                                                b.source?.toUpperCase().includes('BOOKING') ? '✈️' : '✨'}</span>
+                                                {b.totalPrice > 0 && !b.isPrivate && (
+                                                    <span className="font-black text-white whitespace-nowrap">
+                                                        {b.totalPrice} zł
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="truncate max-w-[200px] text-center font-black tracking-tight leading-none">
+                                                {b.status === 'BLOCKED' ? 'Blocked' :
+                                                    b.status === 'CANCELLED' ? 'Cancelled' : b.guestName}
+                                            </span>
+                                        </div>
+                                    );
 
                                     return (
                                         <td
                                             key={day}
-                                            className={`p-0 h-28 text-center day-cell relative transition-all group ${isToday ? 'bg-hotel-gold/[0.02]' : ''
-                                                } ${!booking && !isEditing ? 'hover:bg-alpaca-green/[0.05] cursor-pointer border-r border-neutral-200/50 dark:border-white/[0.03]' : ''
-                                                } ${isEditing ? 'bg-hotel-gold/10 border-r border-neutral-200/50 dark:border-white/[0.03]' : ''
-                                                } ${booking ? 'border-r-0' : ''
+                                            className={`p-0 h-28 text-center day-cell relative transition-all group border-r border-neutral-200/50 dark:border-white/[0.03] ${isToday ? 'bg-hotel-gold/[0.02]' : ''
+                                                } ${!hasAnyBooking && !isEditing ? 'hover:bg-alpaca-green/[0.05] cursor-pointer' : ''
+                                                } ${isEditing ? 'bg-hotel-gold/10' : ''
                                                 }`}
                                             onClick={() => {
-                                                if (hasDragged) return; // Ignore clicks if user was dragging
-                                                if (booking) {
-                                                    setSelectedBooking(booking);
+                                                if (hasDragged) return;
+                                                if (stayBooking) {
+                                                    setSelectedBooking(stayBooking);
+                                                } else if (departingBooking) {
+                                                    setSelectedBooking(departingBooking);
                                                 } else if (!isEditing && onCellClick) {
                                                     onCellClick({
                                                         roomNumber: room.number,
@@ -232,17 +264,20 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                 }
                                             }}
                                             onDoubleClick={(e) => {
-                                                if (hasDragged) return; // Ignore double-clicks if user was dragging
-                                                if (!booking) {
+                                                if (hasDragged) return;
+                                                if (stayBooking) {
+                                                    setSelectedBooking(stayBooking);
+                                                } else if (departingBooking) {
+                                                    setSelectedBooking(departingBooking);
+                                                } else {
                                                     e.stopPropagation();
                                                     setEditingCell({ roomId: room.id, date: day });
                                                     setTempPrice(roomPrice?.toString() || '');
-                                                } else {
-                                                    setSelectedBooking(booking);
                                                 }
                                             }}
                                         >
-                                            {!booking && (
+                                            {/* Price shown when no booking occupies the full cell */}
+                                            {!hasAnyBooking && (
                                                 <div className="flex flex-col items-center justify-center h-full">
                                                     {isEditing ? (
                                                         <input
@@ -252,7 +287,6 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                             value={tempPrice}
                                                             onChange={(e) => setTempPrice(e.target.value)}
                                                             onBlur={async () => {
-                                                                // Save the price
                                                                 try {
                                                                     await fetch('/api/dashboard/rates', {
                                                                         method: 'POST',
@@ -263,7 +297,6 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                                             price: tempPrice
                                                                         })
                                                                     });
-                                                                    // Update local state
                                                                     const updatedData = { ...data };
                                                                     const roomIndex = updatedData.rooms.findIndex((r: any) => r.id === editingCell?.roomId);
                                                                     if (roomIndex !== -1) {
@@ -296,48 +329,48 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                     )}
                                                 </div>
                                             )}
-                                            {booking && (
+
+                                            {/* DEPARTING booking — left half of cell (checkout day) */}
+                                            {departingBooking && (
                                                 <div
-                                                    onClick={(e) => {
-                                                        // Allow the td onClick to handle it for broader click area
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedBooking(departingBooking); }}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '6px',
+                                                        bottom: '6px',
+                                                        left: '-1px',
+                                                        right: '50%',
+                                                        borderRadius: '0 9999px 9999px 0',
+                                                        zIndex: 10,
                                                     }}
-                                                    onDoubleClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setSelectedBooking(booking);
+                                                    className={`flex items-center justify-center text-[10px] font-black uppercase shadow-lg cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden ${getBookingColor(departingBooking)}`}
+                                                >
+                                                    {/* Label only on checkout day for 1-night stays */}
+                                                    {(() => {
+                                                        const { isCenterDay, numNights } = getCenterInfo(departingBooking, departCheckIn, departCheckOut);
+                                                        return (numNights === 1 || isCenterDay) ? renderBookingLabel(departingBooking) : null;
+                                                    })()}
+                                                </div>
+                                            )}
+
+                                            {/* STAYING booking — right half on check-in day, full on middle days */}
+                                            {stayBooking && (
+                                                <div
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedBooking(stayBooking); }}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '6px',
+                                                        bottom: '6px',
+                                                        left: isCheckInDay ? '50%' : '-1px',
+                                                        right: '-1px',
+                                                        borderRadius: isCheckInDay ? '9999px 0 0 9999px' : '0',
+                                                        zIndex: 10,
                                                     }}
-                                                    style={bookingStyle}
-                                                    className={`flex flex-col items-center justify-center text-[10px] font-black uppercase px-3 shadow-lg cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden ${bookingColorClass}`}
+                                                    className={`flex items-center justify-center text-[10px] font-black uppercase shadow-lg cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden ${getBookingColor(stayBooking)}`}
                                                 >
                                                     {(() => {
-                                                        // Calculate which cell is the center of the booking
-                                                        const checkInDate = new Date(checkInStr + 'T12:00:00');
-                                                        const checkOutDate = new Date(checkOutStr + 'T12:00:00');
-                                                        const numNights = Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (24 * 60 * 60 * 1000));
-                                                        const currentDate = new Date(day + 'T12:00:00');
-                                                        const dayIndex = Math.round((currentDate.getTime() - checkInDate.getTime()) / (24 * 60 * 60 * 1000));
-                                                        const centerIndex = Math.floor((numNights - 1) / 2);
-                                                        const isCenterDay = dayIndex === centerIndex;
-
-                                                        return isCenterDay ? (
-                                                            <div className="sticky left-0 right-0 flex flex-col items-center gap-1 w-full px-2 overflow-visible whitespace-nowrap">
-                                                                <div className="flex items-center gap-1.5 opacity-90">
-                                                                    <span className="scale-110">{
-                                                                        booking.isPrivate ? '🤫' :
-                                                                            booking.status === 'BLOCKED' ? '🔒' :
-                                                                                booking.source?.toUpperCase() === 'AIRBNB' ? '🏠' :
-                                                                                    booking.source?.toUpperCase().includes('BOOKING') ? '✈️' : '✨'}</span>
-                                                                    {booking.totalPrice > 0 && !booking.isPrivate && (
-                                                                        <span className="font-black text-white whitespace-nowrap">
-                                                                            {booking.totalPrice} zł
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <span className="truncate max-w-[200px] text-center font-black tracking-tight leading-none">
-                                                                    {booking.status === 'BLOCKED' ? 'Blocked' :
-                                                                        booking.status === 'CANCELLED' ? 'Cancelled' : booking.guestName}
-                                                                </span>
-                                                            </div>
-                                                        ) : null;
+                                                        const { isCenterDay } = getCenterInfo(stayBooking, stayCheckIn, stayCheckOut);
+                                                        return isCenterDay ? renderBookingLabel(stayBooking) : null;
                                                     })()}
                                                 </div>
                                             )}
