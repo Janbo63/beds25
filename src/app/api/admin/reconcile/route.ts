@@ -57,6 +57,7 @@ function extractGuestName(b: any): string {
 async function reconcile(request: NextRequest, dryRun: boolean) {
     const { searchParams } = new URL(request.url);
     const syncZoho = searchParams.get('syncZoho') === 'true';
+    const forceZohoSync = searchParams.get('forceZohoSync') === 'true';
     const debug = searchParams.get('debug') === 'true';
 
     try {
@@ -152,11 +153,23 @@ async function reconcile(request: NextRequest, dryRun: boolean) {
                 if (existing.roomId !== room.id) changes.push(`room: moved to ${room.name}`);
 
                 if (changes.length === 0) {
+                    // No local changes, but optionally force Zoho sync
+                    let didZohoSync = false;
+                    if (!dryRun && forceZohoSync) {
+                        try {
+                            await bookingService.syncToZoho(existing, room);
+                            didZohoSync = true;
+                            zohoSynced++;
+                        } catch (err: any) {
+                            console.error(`[Reconcile] Zoho force sync failed for ${beds24Id}:`, err?.message);
+                        }
+                    }
                     results.push({
                         beds24Id, guestName, roomName: room.name || room.number || '',
                         checkIn: format(checkIn, 'yyyy-MM-dd'),
                         checkOut: format(checkOut, 'yyyy-MM-dd'),
                         status: mappedStatus, action: 'skipped',
+                        zohoSynced: forceZohoSync ? didZohoSync : undefined,
                     });
                     skipped++;
                 } else {
