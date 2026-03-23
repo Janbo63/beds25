@@ -261,6 +261,7 @@ export const bookingService = {
             data: {
                 ...bookingDataForDb,
                 id: zohoRecord.id,
+                zohoId: zohoRecord.id,
                 status: bookingData.status || 'CONFIRMED',
             }
         });
