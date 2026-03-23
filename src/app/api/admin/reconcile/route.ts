@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Extract guest name from Beds24 booking, checking all possible field names
+ * Extract guest name from Beds24 booking, checking all possible field names.
+ * Beds24 stores manually-entered names in the `title` field.
  */
 function extractGuestName(b: any): string {
     const first = b.firstName || b.guestFirstName || '';
@@ -44,7 +45,8 @@ function extractGuestName(b: any): string {
     const combined = `${first} ${last}`.trim();
     if (combined) return combined;
 
-    // Fallback to other possible fields
+    // Fallback: Beds24 uses 'title' for manually entered bookings
+    if (b.title) return b.title;
     if (b.guestName) return b.guestName;
     if (b.name) return b.name;
     if (b.guest) return typeof b.guest === 'string' ? b.guest : '';
@@ -89,15 +91,15 @@ async function reconcile(request: NextRequest, dryRun: boolean) {
             rooms.filter(r => r.externalId).map(r => [r.externalId!, r])
         );
 
-        // 5. Status mapping
+        // 5. Status mapping (handles both numeric codes and string values from Beds24)
         const mapStatus = (s: any) => {
-            const str = s?.toString();
+            const str = s?.toString().toLowerCase();
             switch (str) {
-                case '0': return 'CANCELLED';
-                case '1': return 'CONFIRMED';
-                case '2': return 'NEW';
-                case '3': return 'REQUEST';
-                case '4': return 'BLOCKED';
+                case '0': case 'cancelled': return 'CANCELLED';
+                case '1': case 'confirmed': return 'CONFIRMED';
+                case '2': case 'new': return 'NEW';
+                case '3': case 'request': return 'REQUEST';
+                case '4': case 'black': case 'blocked': return 'BLOCKED';
                 default: return 'CONFIRMED';
             }
         };

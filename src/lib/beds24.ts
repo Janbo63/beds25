@@ -236,7 +236,7 @@ export async function importBeds24Data(inviteCode: string, existingRefreshToken?
         });
 
         if (localRoom) {
-            const guestName = `${b.firstName || ''} ${b.lastName || ''}`.trim() || 'Guest';
+            const guestName = `${b.firstName || ''} ${b.lastName || ''}`.trim() || b.title || 'Guest';
             const guestEmail = b.email || null;
             let guestId = null;
 
