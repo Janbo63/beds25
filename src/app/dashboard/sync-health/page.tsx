@@ -62,7 +62,7 @@ export default function SyncHealthPage() {
         setLoading(true);
         setSyncResult(null);
         try {
-            const res = await fetch('/api/admin/sync-health');
+            const res = await fetch('/api/admin/sync-health?t=' + Date.now(), { cache: 'no-store' });
             const result = await res.json();
             setData(result);
         } catch (err) {
