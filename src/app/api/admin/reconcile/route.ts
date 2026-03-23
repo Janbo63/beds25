@@ -35,9 +35,27 @@ export async function POST(request: NextRequest) {
     return reconcile(request, dryRun);
 }
 
+/**
+ * Extract guest name from Beds24 booking, checking all possible field names
+ */
+function extractGuestName(b: any): string {
+    const first = b.firstName || b.guestFirstName || '';
+    const last = b.lastName || b.guestLastName || '';
+    const combined = `${first} ${last}`.trim();
+    if (combined) return combined;
+
+    // Fallback to other possible fields
+    if (b.guestName) return b.guestName;
+    if (b.name) return b.name;
+    if (b.guest) return typeof b.guest === 'string' ? b.guest : '';
+
+    return 'Guest';
+}
+
 async function reconcile(request: NextRequest, dryRun: boolean) {
     const { searchParams } = new URL(request.url);
     const syncZoho = searchParams.get('syncZoho') === 'true';
+    const debug = searchParams.get('debug') === 'true';
 
     try {
         // 1. Get Beds24 access token from stored property
@@ -96,7 +114,7 @@ async function reconcile(request: NextRequest, dryRun: boolean) {
             if (!room) {
                 results.push({
                     beds24Id,
-                    guestName: `${b.firstName || ''} ${b.lastName || ''}`.trim() || 'Guest',
+                    guestName: extractGuestName(b),
                     roomName: `Unknown (roomId: ${b.roomId})`,
                     checkIn: b.arrival || '',
                     checkOut: b.departure || '',
@@ -108,7 +126,7 @@ async function reconcile(request: NextRequest, dryRun: boolean) {
                 continue;
             }
 
-            const guestName = `${b.firstName || ''} ${b.lastName || ''}`.trim() || 'Guest';
+            const guestName = extractGuestName(b);
             const guestEmail = b.email || null;
             const checkIn = new Date(b.arrival);
             const checkOut = new Date(b.departure);
@@ -202,6 +220,7 @@ async function reconcile(request: NextRequest, dryRun: boolean) {
                     checkIn: format(checkIn, 'yyyy-MM-dd'),
                     checkOut: format(checkOut, 'yyyy-MM-dd'),
                     status: mappedStatus, action: 'created',
+                    ...(debug && guestName === 'Guest' ? { rawBeds24Fields: Object.keys(b).reduce((acc: any, key: string) => { if (b[key]) acc[key] = b[key]; return acc; }, {}) } : {}),
                     zohoSynced: syncZoho ? didZohoSync : undefined,
                 });
                 created++;
