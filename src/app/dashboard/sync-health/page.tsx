@@ -35,6 +35,28 @@ export default function SyncHealthPage() {
     const [loading, setLoading] = useState(false);
     const [syncing, setSyncing] = useState(false);
     const [syncResult, setSyncResult] = useState<string | null>(null);
+    const [fixing, setFixing] = useState<Record<string, boolean>>({});
+
+    const handleFix = async (bookingId: string, issueType: string) => {
+        const key = `${bookingId}-${issueType}`;
+        setFixing(prev => ({ ...prev, [key]: true }));
+        try {
+            const res = await fetch('/api/admin/sync-health/fix', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bookingId, issueType })
+            });
+            const data = await res.json();
+            if (data.success) {
+                await runHealthCheck(); // Refresh the list
+            } else {
+                alert('Fix failed: ' + data.error);
+            }
+        } catch (err: any) {
+            alert('Fix failed: ' + err.message);
+        }
+        setFixing(prev => ({ ...prev, [key]: false }));
+    };
 
     const runHealthCheck = async () => {
         setLoading(true);
@@ -161,6 +183,7 @@ export default function SyncHealthPage() {
                                             <th className="px-4 py-3 text-left font-bold">Room</th>
                                             <th className="px-4 py-3 text-left font-bold">Issue</th>
                                             <th className="px-4 py-3 text-left font-bold">Detail</th>
+                                            <th className="px-4 py-3 text-right font-bold">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -177,6 +200,15 @@ export default function SyncHealthPage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3 text-neutral-500 dark:text-neutral-500 text-xs">{issue.detail}</td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <button
+                                                            onClick={() => handleFix(issue.beds25Id, issue.issue)}
+                                                            disabled={fixing[`${issue.beds25Id}-${issue.issue}`]}
+                                                            className="px-3 py-1 bg-hotel-gold text-black hover:bg-yellow-500 rounded-lg font-bold text-xs transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                                                        >
+                                                            {fixing[`${issue.beds25Id}-${issue.issue}`] ? '⏳ Fixing...' : '🔧 Fix'}
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             );
                                         })}
