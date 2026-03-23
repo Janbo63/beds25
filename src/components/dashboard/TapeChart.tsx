@@ -216,8 +216,8 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                         const numNights = Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (24 * 60 * 60 * 1000));
                                         const currentDate = new Date(day + 'T12:00:00');
                                         const dayIndex = Math.round((currentDate.getTime() - checkInDate.getTime()) / (24 * 60 * 60 * 1000));
-                                        // Shift center right by 1 to account for half-cell on check-in day
-                                        const centerIndex = numNights <= 2 ? Math.floor((numNights - 1) / 2) : Math.floor(numNights / 2);
+                                        // Shift center right to account for half-cell on check-in day
+                                        const centerIndex = Math.ceil(numNights / 2);
                                         return { isCenterDay: dayIndex === centerIndex, numNights };
                                     };
 
