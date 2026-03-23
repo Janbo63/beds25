@@ -379,11 +379,22 @@ export const bookingService = {
 
         console.log(`[ZohoService] Syncing booking ${localBooking.id} to Zoho...`);
 
-        // 1. Find or create contact in Zoho
+        // 1. Find or create contact in Zoho (always, even without email)
         let contactId: string | undefined;
-        if (localBooking.guestEmail) {
+        if (localBooking.guestName && localBooking.guestName !== 'Guest') {
             try {
-                contactId = await findOrCreateContact(localBooking.guestName, localBooking.guestEmail);
+                if (localBooking.guestEmail) {
+                    contactId = await findOrCreateContact(localBooking.guestName, localBooking.guestEmail);
+                } else {
+                    // Create contact with name only (no email)
+                    const [firstName, ...lastNameParts] = localBooking.guestName.split(' ');
+                    const lastName = lastNameParts.join(' ') || firstName;
+                    const newContact = await zohoClient.createRecord('Contacts', {
+                        First_Name: firstName,
+                        Last_Name: lastName,
+                    });
+                    contactId = newContact.id;
+                }
             } catch (err) {
                 console.warn('[ZohoService] Could not find/create contact, proceeding without:', err);
             }
