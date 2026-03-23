@@ -159,6 +159,19 @@ export async function POST(request: NextRequest) {
             console.error('[BookingCreate] Beds24 mirror failed (non-fatal):', beds24Err);
         }
 
+        // 6. Mirror to Zoho CRM (non-blocking)
+        try {
+            const { bookingService } = await import('@/lib/zoho-service');
+            const room = await prisma.room.findUnique({ where: { id: roomId } });
+            if (room) {
+                const updatedBooking = await prisma.booking.findUnique({ where: { id: booking.id } });
+                await bookingService.syncToZoho(updatedBooking, room);
+                console.log('[BookingCreate] Zoho sync completed');
+            }
+        } catch (zohoErr) {
+            console.error('[BookingCreate] Zoho sync failed (non-fatal):', zohoErr);
+        }
+
         return NextResponse.json(
             {
                 bookingRef: booking.bookingRef,

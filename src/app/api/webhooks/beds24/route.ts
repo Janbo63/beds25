@@ -274,8 +274,27 @@ export async function POST(request: NextRequest) {
                     notes: `Updated via Webhook from ${cleanReferer || 'Beds24'}`
                 }
             });
+
+            // Sync update to Zoho (non-blocking)
+            try {
+                const updatedBooking = await prisma.booking.findUnique({ where: { id: existingBooking.id } });
+                await bookingService.syncToZoho(updatedBooking, room);
+            } catch (zohoErr: any) {
+                console.warn('[Webhook] Zoho sync failed (non-fatal):', zohoErr?.message);
+            }
         } else {
-            await bookingService.create(bookingData);
+            const newBooking = await bookingService.create(bookingData);
+
+            // bookingService.create already syncs to Zoho, but ensure zohoId is stored
+            // by running syncToZoho which handles the upsert + zohoId storage
+            try {
+                const createdBooking = await prisma.booking.findFirst({ where: { externalId: bookId.toString() } });
+                if (createdBooking && !createdBooking.zohoId) {
+                    await bookingService.syncToZoho(createdBooking, room);
+                }
+            } catch (zohoErr: any) {
+                console.warn('[Webhook] Zoho sync for new booking failed (non-fatal):', zohoErr?.message);
+            }
         }
 
         await logWebhook({
