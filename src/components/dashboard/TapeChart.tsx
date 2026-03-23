@@ -236,7 +236,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                 )}
                                             </div>
                                             <span className="truncate max-w-[200px] text-center font-black tracking-tight leading-none">
-                                                {b.status === 'BLOCKED' ? 'Blocked' :
+                                                {b.status === 'BLOCKED' ? (b.guestName || 'Blocked') :
                                                     b.status === 'CANCELLED' ? 'Cancelled' : b.guestName}
                                             </span>
                                         </div>
