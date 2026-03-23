@@ -9,6 +9,7 @@ import {
     BarChart3,
     DollarSign,
     Settings,
+    Activity,
     ChevronRight,
     ChevronLeft
 } from 'lucide-react';
@@ -49,6 +50,7 @@ export default function Sidebar() {
         { icon: Calendar, label: t('tapeChart'), href: '/dashboard' },
         { icon: BarChart3, label: t('reports'), href: '/dashboard/reports' },
         { icon: DollarSign, label: t('rates'), href: '/dashboard/rates' },
+        { icon: Activity, label: 'Sync Health', href: '/dashboard/sync-health' },
         { icon: Settings, label: t('settings'), href: '/dashboard/settings' },
     ];
 
