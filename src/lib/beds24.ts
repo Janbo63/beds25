@@ -484,6 +484,56 @@ export async function createBeds24Booking(bookingData: any) {
     return beds24Id;
 }
 
+export async function updateBeds24Booking(
+    bookingId: string,
+    bookingData: { checkIn: Date; checkOut: Date; guestName: string; guestEmail?: string; numAdults?: number; numChildren?: number; totalPrice?: number; status?: string },
+    refreshToken?: string
+) {
+    let token = '';
+    if (refreshToken) {
+        token = await getBeds24AccessToken(refreshToken);
+    } else {
+        const prop = await prisma.property.findFirst({ where: { beds24RefreshToken: { not: null } } });
+        if (!prop?.beds24RefreshToken) throw new Error('No Beds24 credentials found');
+        token = await getBeds24AccessToken(prop.beds24RefreshToken);
+    }
+
+    const payload = [{
+        id: parseInt(bookingId),
+        arrival: format(new Date(bookingData.checkIn), 'yyyy-MM-dd'),
+        departure: format(new Date(bookingData.checkOut), 'yyyy-MM-dd'),
+        status: bookingData.status === 'CANCELLED' ? 'cancelled' : 'confirmed',
+        firstName: bookingData.guestName.split(' ')[0] || 'Guest',
+        lastName: bookingData.guestName.split(' ').slice(1).join(' ') || '.',
+        email: bookingData.guestEmail || '',
+        numAdults: bookingData.numAdults || 2,
+        numChildren: bookingData.numChildren || 0,
+        price: bookingData.totalPrice?.toString() || '0',
+    }];
+
+    const response = await fetch(`${BEDS24_API_URL}/bookings`, {
+        method: 'POST',
+        headers: { 'token': token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const err = await response.text();
+        console.warn(`[Beds24] Update booking ${bookingId} failed: ${err}`);
+    }
+
+    await prisma.webhookLog.create({
+        data: {
+            direction: 'OUTGOING', source: 'BEDS24',
+            event: 'BOOKING_UPDATE', status: response.ok ? 'SUCCESS' : 'ERROR',
+            externalId: bookingId, payload: JSON.stringify(payload),
+            error: response.ok ? null : 'Update failed'
+        }
+    }).catch(() => { });
+
+    return response.ok;
+}
+
 export async function cancelBeds24Booking(bookingId: string, refreshToken?: string) {
     let token = '';
 

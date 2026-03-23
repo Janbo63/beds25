@@ -11,7 +11,7 @@
 import zohoClient, { ZohoRecord } from './zoho';
 import prisma from './prisma';
 import { format } from 'date-fns';
-import { createBeds24Booking, cancelBeds24Booking } from './beds24';
+import { createBeds24Booking, cancelBeds24Booking, updateBeds24Booking } from './beds24';
 
 /**
  * Zoho Module Names - matching your CRM setup
@@ -275,7 +275,7 @@ export const bookingService = {
         // Fetch existing from local DB to merge for Zoho payload
         const existing = await prisma.booking.findUnique({
             where: { id },
-            include: { room: true }
+            include: { room: { include: { property: true } } }
         });
         if (!existing) throw new Error('Booking not found');
         const merged = { ...existing, ...updates };
@@ -305,6 +305,24 @@ export const bookingService = {
             where: { id },
             data: updates
         });
+
+        // 3. Sync to Beds24 (update channel availability)
+        if (existing.externalId) {
+            try {
+                await updateBeds24Booking(existing.externalId, {
+                    checkIn: localBooking.checkIn,
+                    checkOut: localBooking.checkOut,
+                    guestName: localBooking.guestName,
+                    guestEmail: localBooking.guestEmail || undefined,
+                    numAdults: localBooking.numAdults,
+                    numChildren: localBooking.numChildren,
+                    totalPrice: localBooking.totalPrice || undefined,
+                    status: localBooking.status,
+                }, existing.room?.property?.beds24RefreshToken || undefined);
+            } catch (err) {
+                console.warn('[ZohoService] Beds24 update failed (non-fatal):', err);
+            }
+        }
 
         return localBooking;
     },

@@ -50,6 +50,18 @@ export async function POST(
             }
         }
 
+        // Update Zoho Booking status (non-blocking)
+        try {
+            const { bookingService } = await import('@/lib/zoho-service');
+            const room = await prisma.room.findUnique({ where: { id: booking.roomId } });
+            if (room) {
+                const freshBooking = await prisma.booking.findUnique({ where: { id: booking.id } });
+                await bookingService.syncToZoho(freshBooking, room);
+            }
+        } catch (zohoErr) {
+            console.error('[BookingCancel] Zoho sync failed (non-fatal):', zohoErr);
+        }
+
         return NextResponse.json(
             { status: 'CANCELLED', beds24Updated },
             { headers: corsHeaders(request) }
