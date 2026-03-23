@@ -161,8 +161,9 @@ async function reconcile(request: NextRequest, dryRun: boolean) {
                     skipped++;
                 } else {
                     // Has changes — update
+                    let didZohoSync = false;
                     if (!dryRun) {
-                        await prisma.booking.update({
+                        const updatedBooking = await prisma.booking.update({
                             where: { id: existing.id },
                             data: {
                                 guestName, guestEmail, checkIn, checkOut,
@@ -170,12 +171,24 @@ async function reconcile(request: NextRequest, dryRun: boolean) {
                                 numAdults, numChildren, roomId: room.id,
                             },
                         });
+
+                        // Also sync updates to Zoho
+                        if (syncZoho) {
+                            try {
+                                await bookingService.syncToZoho(updatedBooking, room);
+                                didZohoSync = true;
+                                zohoSynced++;
+                            } catch (err: any) {
+                                console.error(`[Reconcile] Zoho update sync failed for ${beds24Id}:`, err?.message);
+                            }
+                        }
                     }
                     results.push({
                         beds24Id, guestName, roomName: room.name || room.number || '',
                         checkIn: format(checkIn, 'yyyy-MM-dd'),
                         checkOut: format(checkOut, 'yyyy-MM-dd'),
                         status: mappedStatus, action: 'updated', changes,
+                        zohoSynced: syncZoho ? didZohoSync : undefined,
                     });
                     updated++;
                 }
