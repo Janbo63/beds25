@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
                 console.warn('[Webhook] Zoho sync failed (non-fatal):', zohoErr?.message);
             }
         } else {
-            const newBooking = await bookingService.create(bookingData);
+            await bookingService.create(bookingData);
 
             // bookingService.create already syncs to Zoho, but ensure zohoId is stored
             // by running syncToZoho which handles the upsert + zohoId storage
