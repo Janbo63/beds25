@@ -81,7 +81,7 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         Payment_Method: booking.paymentMethod,
         Payment_Timing: booking.paymentTiming,
         Payment_Status: booking.paymentStatus,
-        Arrvial_Time: booking.arrivalTime, // Zoho API name usually matches label/generated name
+        Arrvial_Time: booking.arrivalTime,
         BookingCom_Order_ID: booking.bookingComOrderId,
         BookingCom_Pincode: booking.bookingComPincode,
         Commission_Amount: booking.commissionAmount,
@@ -92,6 +92,9 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         Currency1: booking.currency,
         Private: booking.isPrivate,
         Booking_status: booking.isPrivate ? 'Private' : (booking.status || 'Confirmed'),
+        // Cross-reference IDs for Beds24 ↔ Beds25 ↔ Zoho link
+        Beds24ID: booking.externalId || null,
+        Beds25ID: booking.id || null,
     };
 
     if (contactId) {
@@ -392,11 +395,54 @@ export const bookingService = {
             roomNumber: room.number || room.name,
         }, contactId, room.id);
 
-        // 3. Create record in Zoho
+        // 3. Upsert: update if zohoId exists, search by Beds24ID, or create new
         try {
-            const zohoRecord = await zohoClient.createRecord(ZOHO_MODULES.BOOKINGS, zohoData);
-            console.log(`[ZohoService] Booking synced to Zoho with ID: ${zohoRecord.id}`);
-            return zohoRecord;
+            let zohoRecordId: string | undefined;
+
+            // Option A: Already have zohoId → update existing record
+            if (localBooking.zohoId) {
+                try {
+                    await zohoClient.updateRecord(ZOHO_MODULES.BOOKINGS, localBooking.zohoId, zohoData);
+                    zohoRecordId = localBooking.zohoId;
+                    console.log(`[ZohoService] Updated existing Zoho record: ${zohoRecordId}`);
+                } catch (updateErr) {
+                    console.warn(`[ZohoService] Update failed for zohoId ${localBooking.zohoId}, will try search/create:`, updateErr);
+                }
+            }
+
+            // Option B: Search Zoho by Beds24ID
+            if (!zohoRecordId && localBooking.externalId) {
+                try {
+                    const searchResult = await zohoClient.searchRecords(
+                        `select id from ${ZOHO_MODULES.BOOKINGS} where Beds24ID = '${localBooking.externalId}'`
+                    );
+                    if (searchResult.data && searchResult.data.length > 0) {
+                        zohoRecordId = searchResult.data[0].id!;
+                        await zohoClient.updateRecord(ZOHO_MODULES.BOOKINGS, zohoRecordId, zohoData);
+                        console.log(`[ZohoService] Found by Beds24ID and updated Zoho record: ${zohoRecordId}`);
+                    }
+                } catch (searchErr) {
+                    console.warn('[ZohoService] Search by Beds24ID failed, will create new:', searchErr);
+                }
+            }
+
+            // Option C: Create new record
+            if (!zohoRecordId) {
+                const zohoRecord = await zohoClient.createRecord(ZOHO_MODULES.BOOKINGS, zohoData);
+                zohoRecordId = zohoRecord.id;
+                console.log(`[ZohoService] Created new Zoho record: ${zohoRecordId}`);
+            }
+
+            // 4. Store zohoId back on local booking
+            if (zohoRecordId && zohoRecordId !== localBooking.zohoId) {
+                await prisma.booking.update({
+                    where: { id: localBooking.id },
+                    data: { zohoId: zohoRecordId },
+                });
+                console.log(`[ZohoService] Stored zohoId ${zohoRecordId} on booking ${localBooking.id}`);
+            }
+
+            return { id: zohoRecordId };
         } catch (error) {
             console.error(`[ZohoService] Failed to sync booking to Zoho:`, error);
             throw error;

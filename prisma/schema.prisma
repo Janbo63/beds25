@@ -184,6 +184,7 @@ model Booking {
   stripePaymentMethodId String? // Saved payment method for off-session T-3 charge
 
   zohoBookingDealId String? // Zoho CRM Deal ID for back-linking
+  zohoId            String?  @unique // Zoho CRM Booking record ID
   nipNumber         String? // Polish VAT / NIP number for invoice
   specialRequests   String? // Free text from booking form (distinct from internal notes)
 
