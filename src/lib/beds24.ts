@@ -469,8 +469,29 @@ export async function createBeds24Booking(bookingData: any) {
 
     const result = await response.json();
     let beds24Id = null;
-    if (Array.isArray(result) && result.length > 0) beds24Id = result[0].id;
-    else if (result.id) beds24Id = result.id;
+    
+    // Check if the first item (since we send an array of 1) has an ID
+    if (Array.isArray(result) && result.length > 0) {
+        if (result[0].id) {
+            beds24Id = result[0].id;
+        } else if (result[0].bookId) {
+            beds24Id = result[0].bookId;
+        } else if (result[0].success === false || result[0].errors) {
+            const errorMsg = result[0].message || JSON.stringify(result[0].errors) || 'Unknown validation error';
+            throw new Error(`Beds24 rejected the booking: ${JSON.stringify(result[0])}`);
+        } else {
+            throw new Error(`Beds24 returned no ID. Raw response: ${JSON.stringify(result)}`);
+        }
+    } else if (result && result.id) {
+        beds24Id = result.id;
+    } else if (result && result.bookId) {
+        beds24Id = result.bookId;
+    } else if (result && (result.success === false || result.errors)) {
+        const errorMsg = result.message || JSON.stringify(result.errors) || 'Unknown validation error';
+        throw new Error(`Beds24 rejected the booking: ${JSON.stringify(result)}`);
+    } else {
+        throw new Error(`Beds24 returned no ID. Raw response: ${JSON.stringify(result)}`);
+    }
 
     await prisma.webhookLog.create({
         data: {
