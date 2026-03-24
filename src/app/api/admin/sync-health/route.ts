@@ -70,7 +70,7 @@ export async function GET() {
                         }
 
                         // Check status alignment
-                        if (zohoStatus && zohoStatus !== booking.status && booking.status !== 'BLOCKED') {
+                        if (zohoStatus && zohoStatus.toUpperCase() !== booking.status && booking.status !== 'BLOCKED') {
                             issues.push({
                                 beds25Id: booking.id,
                                 guest: booking.guestName,

@@ -91,7 +91,7 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         Source_Channel: booking.source,
         Currency1: booking.currency,
         Private: booking.isPrivate,
-        Booking_status: booking.isPrivate ? 'Private' : (booking.status || 'Confirmed'),
+        Booking_status: booking.status || 'Confirmed',
         // Cross-reference IDs for Beds24 ↔ Beds25 ↔ Zoho link
         Beds24ID: booking.externalId || null,
         Beds25ID: booking.id || null,
@@ -125,7 +125,7 @@ function mapZohoToBooking(zohoRecord: ZohoRecord): any {
         numChildren: parseInt(zohoRecord.Number_of_Children || 0),
         guestAges: zohoRecord.Guest_Ages,
         notes: zohoRecord.Booking_Notes,
-        status: zohoRecord.Status || 'CONFIRMED', // Assuming a Status field exists or defaults
+        status: zohoRecord.Booking_status ? zohoRecord.Booking_status.toUpperCase() : 'CONFIRMED',
         source: zohoRecord.Source_Channel || 'DIRECT',
         paymentMethod: zohoRecord.Payment_Method,
         paymentTiming: zohoRecord.Payment_Timing,
