@@ -472,7 +472,9 @@ export async function createBeds24Booking(bookingData: any) {
     
     // Check if the first item (since we send an array of 1) has an ID
     if (Array.isArray(result) && result.length > 0) {
-        if (result[0].id) {
+        if (result[0].new && result[0].new.id) {
+            beds24Id = result[0].new.id;
+        } else if (result[0].id) {
             beds24Id = result[0].id;
         } else if (result[0].bookId) {
             beds24Id = result[0].bookId;
@@ -482,6 +484,8 @@ export async function createBeds24Booking(bookingData: any) {
         } else {
             throw new Error(`Beds24 returned no ID. Raw response: ${JSON.stringify(result)}`);
         }
+    } else if (result && result.new && result.new.id) {
+        beds24Id = result.new.id;
     } else if (result && result.id) {
         beds24Id = result.id;
     } else if (result && result.bookId) {
