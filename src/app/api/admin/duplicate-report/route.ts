@@ -18,7 +18,7 @@ export async function GET() {
         // 1. Get ALL Beds25 bookings
         const beds25Bookings = await prisma.booking.findMany({
             where: { status: { not: 'CANCELLED' } },
-            include: { room: { select: { name: true, roomNumber: true } } },
+            include: { room: { select: { name: true, number: true } } },
             orderBy: { checkIn: 'asc' },
         });
 
@@ -27,7 +27,7 @@ export async function GET() {
         for (const b of beds25Bookings) {
             const checkIn = b.checkIn instanceof Date ? b.checkIn.toISOString().slice(0, 10) : String(b.checkIn).slice(0, 10);
             const checkOut = b.checkOut instanceof Date ? b.checkOut.toISOString().slice(0, 10) : String(b.checkOut).slice(0, 10);
-            const key = `${(b.guestName || '').toLowerCase().trim()}|${checkIn}|${checkOut}|${b.room?.roomNumber || ''}`;
+            const key = `${(b.guestName || '').toLowerCase().trim()}|${checkIn}|${checkOut}|${b.room?.number || ''}`;
             const group = beds25Groups.get(key) || [];
             group.push(b);
             beds25Groups.set(key, group);
