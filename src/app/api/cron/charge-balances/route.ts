@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import Stripe from 'stripe';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,9 +31,12 @@ export async function POST(request: NextRequest) {
     targetDateEnd.setDate(targetDateEnd.getDate() + 1);
 
     // Find all bookings due for balance charge today (checkIn = today + 3)
+    // Query by paymentStatus='partial' (deposit paid, balance pending)
+    // NOT by booking status — booking status stays CONFIRMED throughout
     const bookings = await prisma.booking.findMany({
         where: {
-            status: 'DEPOSIT_PAID',
+            status: 'CONFIRMED',
+            paymentStatus: 'partial',
             checkIn: { gte: targetDate, lt: targetDateEnd },
             balancePaidAt: null,
             stripeCustomerId: { not: null },
@@ -58,12 +60,6 @@ export async function POST(request: NextRequest) {
         const bookingRef = booking.bookingRef ?? booking.id;
 
         try {
-            // Move to BALANCE_PENDING to prevent duplicate charges on re-run
-            await prisma.booking.update({
-                where: { id: booking.id },
-                data: { status: 'BALANCE_PENDING' },
-            });
-
             // Attempt off-session charge
             const paymentIntent = await stripe.paymentIntents.create({
                 amount: Math.round((booking.balanceAmount ?? 0) * 100), // pence/grosz
@@ -79,11 +75,10 @@ export async function POST(request: NextRequest) {
                 },
             });
 
-            // Success
+            // Success — booking status stays CONFIRMED, payment status → paid
             await prisma.booking.update({
                 where: { id: booking.id },
                 data: {
-                    status: 'FULLY_PAID',
                     balancePaidAt: new Date(),
                     stripeBalanceId: paymentIntent.id,
                     paymentStatus: 'paid',
@@ -95,21 +90,22 @@ export async function POST(request: NextRequest) {
                 console.error(`[Cron] Zoho update failed for ${bookingRef}:`, err)
             );
 
-            results.push({ bookingRef, status: 'FULLY_PAID' });
+            results.push({ bookingRef, status: 'paid' });
             console.log(`[Cron] ✅ Balance charged: ${bookingRef} — ${booking.balanceAmount} ${booking.currency}`);
 
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Unknown Stripe error';
             console.error(`[Cron] ❌ Charge failed: ${bookingRef} — ${msg}`);
 
+            // Booking status stays CONFIRMED — only payment status changes to failed
             await prisma.booking.update({
                 where: { id: booking.id },
-                data: { status: 'PAYMENT_FAILED', paymentStatus: 'failed' },
+                data: { paymentStatus: 'failed' },
             });
 
             await updateZohoDealStatus(booking.zohoBookingDealId, 'Payment Failed').catch(() => { });
 
-            results.push({ bookingRef, status: 'PAYMENT_FAILED', error: msg });
+            results.push({ bookingRef, status: 'payment_failed', error: msg });
         }
     }
 

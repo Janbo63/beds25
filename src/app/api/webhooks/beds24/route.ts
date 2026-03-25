@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { bookingService } from '@/lib/zoho-service';
 import { addDays } from 'date-fns';
+import { beds24ToBeds25 } from '@/lib/status-map';
 
 export const dynamic = 'force-dynamic';
 
@@ -196,14 +197,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Missing bookId or roomId' }, { status: 400 });
         }
 
-        // Map Status
-        let mappedStatus = 'CONFIRMED';
-        const statusLower = (status || '').toString().toLowerCase();
-        if (statusLower === '0' || statusLower === 'cancelled') mappedStatus = 'CANCELLED';
-        else if (statusLower === '1' || statusLower === 'confirmed') mappedStatus = 'CONFIRMED';
-        else if (statusLower === '2' || statusLower === 'new') mappedStatus = 'NEW';
-        else if (statusLower === '3' || statusLower === 'request') mappedStatus = 'REQUEST';
-        else if (statusLower === '4' || statusLower === 'black' || statusLower === 'blocked') mappedStatus = 'BLOCKED';
+        // Map Status using shared utility
+        const mappedStatus = beds24ToBeds25(status);
 
         // Parse dates
         const checkIn = parseFlexibleDate(firstNight);
