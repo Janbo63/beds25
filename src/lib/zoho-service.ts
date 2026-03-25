@@ -91,7 +91,8 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         Source_Channel: booking.source,
         Currency1: booking.currency,
         Private: booking.isPrivate,
-        Booking_status: booking.status || 'Confirmed',
+        // Map Beds25 uppercase status to Zoho title-case dropdown values
+        Booking_status: ({ 'CONFIRMED': 'Confirmed', 'CANCELLED': 'Cancelled', 'NEW': 'New', 'REQUEST': 'Request', 'BLOCKED': 'Blocked' } as Record<string, string>)[booking.status] || booking.status || 'Confirmed',
         // Cross-reference IDs for Beds24 ↔ Beds25 ↔ Zoho link
         Beds24ID: booking.externalId || null,
         Beds25ID: booking.id || null,
