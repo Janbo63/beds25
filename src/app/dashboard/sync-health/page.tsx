@@ -29,7 +29,7 @@ const ISSUE_LABELS: Record<string, { label: string; color: string }> = {
     zoho_status_mismatch: { label: 'Status Mismatch (Zoho)', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
     zoho_record_not_found: { label: 'Zoho Record Gone', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
     zoho_fetch_error: { label: 'Zoho Error', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
-    beds24_status_mismatch: { label: '⚠️ Channel Cancellation', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
+    beds24_status_mismatch: { label: '⚠️ Beds24 Mismatch', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
     beds24_record_not_found: { label: 'Beds24 Record Gone', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
 };
 

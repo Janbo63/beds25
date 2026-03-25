@@ -38,32 +38,51 @@ export async function POST(req: NextRequest) {
             await bookingService.syncToZoho(booking, booking.room);
         } 
         else if (issueType === 'beds24_status_mismatch') {
-            // Channel cancellation detected: Beds24 says cancelled but Beds25 doesn't.
-            // Propagate the cancellation to Beds25 and Zoho.
+            // Beds24 status differs from Beds25. Extract the Beds24 status 
+            // from the detail string and update Beds25 + Zoho to match.
             const detail = body.detail || '';
             
-            if (detail.includes('Cancelled in Beds24')) {
-                // Update Beds25 status to CANCELLED
-                await prisma.booking.update({
-                    where: { id: bookingId },
-                    data: { status: 'CANCELLED', notes: `Cancelled via channel (detected by health check)` }
-                });
-
-                // Update Zoho to CANCELLED
-                if (booking.zohoId) {
-                    try {
-                        const zohoClient = (await import('@/lib/zoho')).default;
-                        await zohoClient.updateRecord('Bookings', booking.zohoId, {
-                            Booking_status: 'Cancelled'
-                        });
-                        console.log(`[SyncFix] Propagated cancellation to Zoho for ${bookingId}`);
-                    } catch (zohoErr: any) {
-                        console.warn(`[SyncFix] Zoho cancellation update failed:`, zohoErr?.message);
-                    }
-                }
+            // Parse the Beds24 status from detail like "Beds25: NEW, Beds24: CONFIRMED"
+            // or "Cancelled in Beds24 but CONFIRMED in Beds25"
+            let targetStatus = 'CONFIRMED'; // sensible default
+            
+            if (detail.includes('Cancelled in Beds24') || detail.includes('Beds24: CANCELLED')) {
+                targetStatus = 'CANCELLED';
             } else {
-                // Generic status mismatch — re-sync Beds25 status to Zoho
-                await bookingService.syncToZoho(booking, booking.room);
+                const beds24Match = detail.match(/Beds24:\s*(\w+)/i);
+                if (beds24Match) {
+                    targetStatus = beds24Match[1].toUpperCase();
+                }
+            }
+            
+            console.log(`[SyncFix] Syncing Beds25 status from ${booking.status} → ${targetStatus} (source: Beds24)`);
+            
+            // Update Beds25 status to match Beds24
+            await prisma.booking.update({
+                where: { id: bookingId },
+                data: { 
+                    status: targetStatus, 
+                    notes: `Status synced from Beds24 channel (was: ${booking.status})` 
+                }
+            });
+
+            // Update Zoho to match
+            if (booking.zohoId) {
+                try {
+                    const zohoClient = (await import('@/lib/zoho')).default;
+                    // Map status for Zoho dropdown
+                    const zohoStatus = targetStatus === 'CANCELLED' ? 'Cancelled' 
+                        : targetStatus === 'NEW' ? 'New'
+                        : targetStatus === 'CONFIRMED' ? 'Confirmed'
+                        : targetStatus;
+                    await zohoClient.updateRecord('Bookings', booking.zohoId, {
+                        Booking_status: zohoStatus
+                    });
+                    console.log(`[SyncFix] Updated Zoho status to ${zohoStatus} for ${bookingId}`);
+                } catch (zohoErr: unknown) {
+                    const msg = zohoErr instanceof Error ? zohoErr.message : 'Unknown';
+                    console.warn(`[SyncFix] Zoho status update failed:`, msg);
+                }
             }
         }
         else if (issueType === 'missing_beds24_id') {
