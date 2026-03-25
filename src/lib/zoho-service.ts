@@ -12,6 +12,7 @@ import zohoClient, { ZohoRecord } from './zoho';
 import prisma from './prisma';
 import { format } from 'date-fns';
 import { createBeds24Booking, cancelBeds24Booking, updateBeds24Booking } from './beds24';
+import { beds25ToZoho, zohoToBeds25 } from './status-map';
 
 /**
  * Zoho Module Names - matching your CRM setup
@@ -91,8 +92,7 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         Source_Channel: booking.source,
         Currency1: booking.currency,
         Private: booking.isPrivate,
-        // Map Beds25 uppercase status to Zoho title-case dropdown values
-        Booking_status: ({ 'CONFIRMED': 'Confirmed', 'CANCELLED': 'Cancelled', 'NEW': 'New', 'REQUEST': 'Request', 'BLOCKED': 'Blocked' } as Record<string, string>)[booking.status] || booking.status || 'Confirmed',
+        Booking_status: beds25ToZoho(booking.status),
         // Cross-reference IDs for Beds24 ↔ Beds25 ↔ Zoho link
         Beds24ID: booking.externalId || null,
         Beds25ID: booking.id || null,
@@ -126,7 +126,7 @@ function mapZohoToBooking(zohoRecord: ZohoRecord): any {
         numChildren: parseInt(zohoRecord.Number_of_Children || 0),
         guestAges: zohoRecord.Guest_Ages,
         notes: zohoRecord.Booking_Notes,
-        status: zohoRecord.Booking_status ? zohoRecord.Booking_status.toUpperCase() : 'CONFIRMED',
+        status: zohoToBeds25(zohoRecord.Booking_status),
         source: zohoRecord.Source_Channel || 'DIRECT',
         paymentMethod: zohoRecord.Payment_Method,
         paymentTiming: zohoRecord.Payment_Timing,

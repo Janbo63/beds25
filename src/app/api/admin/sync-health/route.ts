@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import zohoClient from '@/lib/zoho';
 import { fetchBeds24Bookings, getBeds24AccessToken } from '@/lib/beds24';
+import { beds24ToBeds25 } from '@/lib/status-map';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,18 +61,8 @@ export async function GET() {
         let beds24Checked = 0;
         let beds24Ok = 0;
 
-        // Map Beds24 numeric status to string
-        const mapBeds24Status = (s: any): string => {
-            const str = s?.toString();
-            switch (str) {
-                case '0': return 'CANCELLED';
-                case '1': return 'CONFIRMED';
-                case '2': return 'NEW';
-                case '3': return 'REQUEST';
-                case '4': return 'BLOCKED';
-                default: return str?.toUpperCase() || 'UNKNOWN';
-            }
-        };
+        // Map Beds24 numeric status using shared utility
+        const mapBeds24Status = beds24ToBeds25;
 
         for (const booking of activeBookings) {
             const checkIn = booking.checkIn instanceof Date ? booking.checkIn.toISOString().slice(0, 10) : String(booking.checkIn).slice(0, 10);
@@ -137,7 +128,7 @@ export async function GET() {
                 beds24Checked++;
                 const beds24Booking = beds24Map.get(booking.externalId);
                 if (beds24Booking) {
-                    const beds24Status = mapBeds24Status(beds24Booking.status);
+                    const beds24Status = mapBeds24Status(beds24Booking.status as string | number);
                     
                     // Check if Beds24 shows cancelled but Beds25 doesn't
                     if (beds24Status === 'CANCELLED' && booking.status !== 'CANCELLED') {
@@ -147,7 +138,7 @@ export async function GET() {
                             issue: 'beds24_status_mismatch',
                             detail: `Cancelled in Beds24 but ${booking.status} in Beds25 — channel cancellation not propagated`,
                         });
-                    } else if (beds24Status !== 'CANCELLED' && beds24Status !== booking.status && booking.status !== 'BLOCKED' && beds24Status !== 'UNKNOWN') {
+                    } else if (beds24Status !== 'CANCELLED' && beds24Status !== booking.status && booking.status !== 'BLOCKED') {
                         issues.push({
                             beds25Id: booking.id, guest: booking.guestName,
                             dates: dateRange, room: roomNum,

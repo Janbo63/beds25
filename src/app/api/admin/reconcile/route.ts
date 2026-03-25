@@ -92,18 +92,8 @@ async function reconcile(request: NextRequest, dryRun: boolean) {
             rooms.filter(r => r.externalId).map(r => [r.externalId!, r])
         );
 
-        // 5. Status mapping (handles both numeric codes and string values from Beds24)
-        const mapStatus = (s: any) => {
-            const str = s?.toString().toLowerCase();
-            switch (str) {
-                case '0': case 'cancelled': return 'CANCELLED';
-                case '1': case 'confirmed': return 'CONFIRMED';
-                case '2': case 'new': return 'NEW';
-                case '3': case 'request': return 'REQUEST';
-                case '4': case 'black': case 'blocked': return 'BLOCKED';
-                default: return 'CONFIRMED';
-            }
-        };
+        // 5. Status mapping (uses shared status-map utility)
+        const mapStatus = (await import('@/lib/status-map')).beds24ToBeds25;
 
         // 6. Reconcile each Beds24 booking
         const results: ReconcileResult[] = [];
