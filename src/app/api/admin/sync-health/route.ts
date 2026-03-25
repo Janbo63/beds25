@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import zohoClient from '@/lib/zoho';
 import { fetchBeds24Bookings, getBeds24AccessToken } from '@/lib/beds24';
-import { beds24ToBeds25 } from '@/lib/status-map';
+import { beds24ToBeds25, beds25ToZoho } from '@/lib/status-map';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,12 +90,14 @@ export async function GET() {
                             zohoOk++;
                         }
 
-                        if (zohoStatus && zohoStatus.toUpperCase() !== booking.status && booking.status !== 'BLOCKED') {
+                        // Compare status using the shared mapping
+                        const expectedZohoStatus = beds25ToZoho(booking.status);
+                        if (zohoStatus && zohoStatus !== expectedZohoStatus) {
                             issues.push({
                                 beds25Id: booking.id, guest: booking.guestName,
                                 dates: dateRange, room: roomNum,
                                 issue: 'zoho_status_mismatch',
-                                detail: `Beds25: ${booking.status}, Zoho: ${zohoStatus}`,
+                                detail: `Beds25: ${booking.status} (→ "${expectedZohoStatus}"), Zoho: "${zohoStatus}"`,
                             });
                         }
                     } else {
