@@ -17,6 +17,7 @@ interface SyncHealthData {
     allSynced: boolean;
     zoho: { checked: number; ok: number; missing: number };
     beds24: { checked: number; ok: number; missing: number };
+    beds24Duplicates?: number;
     issueCount: number;
     issues: SyncIssue[];
 }
@@ -25,9 +26,11 @@ const ISSUE_LABELS: Record<string, { label: string; color: string }> = {
     missing_zoho_id: { label: 'Missing in Zoho', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
     missing_beds24_id: { label: 'Missing in Beds24', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
     zoho_date_mismatch: { label: 'Date Mismatch', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
-    zoho_status_mismatch: { label: 'Status Mismatch', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
+    zoho_status_mismatch: { label: 'Status Mismatch (Zoho)', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
     zoho_record_not_found: { label: 'Zoho Record Gone', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
     zoho_fetch_error: { label: 'Zoho Error', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
+    beds24_status_mismatch: { label: '⚠️ Channel Cancellation', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
+    beds24_record_not_found: { label: 'Beds24 Record Gone', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
 };
 
 export default function SyncHealthPage() {
@@ -37,14 +40,14 @@ export default function SyncHealthPage() {
     const [syncResult, setSyncResult] = useState<string | null>(null);
     const [fixing, setFixing] = useState<Record<string, boolean>>({});
 
-    const handleFix = async (bookingId: string, issueType: string) => {
+    const handleFix = async (bookingId: string, issueType: string, detail?: string) => {
         const key = `${bookingId}-${issueType}`;
         setFixing(prev => ({ ...prev, [key]: true }));
         try {
             const res = await fetch('/api/admin/sync-health/fix', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bookingId, issueType })
+                body: JSON.stringify({ bookingId, issueType, detail })
             });
             const data = await res.json();
             if (data.success) {
@@ -163,6 +166,11 @@ export default function SyncHealthPage() {
                             <div className="text-sm font-bold text-neutral-500">
                                 {data.beds24.missing === 0 ? '✅ All linked' : `❌ ${data.beds24.missing} not linked`}
                             </div>
+                            {(data.beds24Duplicates ?? 0) > 0 && (
+                                <div className="text-xs font-bold text-red-500 mt-1">
+                                    ⚠️ {data.beds24Duplicates} duplicate entries detected in Beds24
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -202,7 +210,7 @@ export default function SyncHealthPage() {
                                                     <td className="px-4 py-3 text-neutral-500 dark:text-neutral-500 text-xs">{issue.detail}</td>
                                                     <td className="px-4 py-3 text-right">
                                                         <button
-                                                            onClick={() => handleFix(issue.beds25Id, issue.issue)}
+                                                            onClick={() => handleFix(issue.beds25Id, issue.issue, issue.detail)}
                                                             disabled={fixing[`${issue.beds25Id}-${issue.issue}`]}
                                                             className="px-3 py-1 bg-hotel-gold text-black hover:bg-yellow-500 rounded-lg font-bold text-xs transition-colors disabled:opacity-50 inline-flex items-center gap-1"
                                                         >
