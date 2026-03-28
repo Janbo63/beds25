@@ -278,18 +278,9 @@ export async function POST(request: NextRequest) {
                 console.warn('[Webhook] Zoho sync failed (non-fatal):', zohoErr?.message);
             }
         } else {
+            // bookingService.create() handles: Zoho create + Beds24 push + local DB
+            // Do NOT call syncToZoho() again — that's Bug #1 (creates duplicate Zoho records)
             await bookingService.create(bookingData);
-
-            // bookingService.create already syncs to Zoho, but ensure zohoId is stored
-            // by running syncToZoho which handles the upsert + zohoId storage
-            try {
-                const createdBooking = await prisma.booking.findFirst({ where: { externalId: bookId.toString() } });
-                if (createdBooking && !createdBooking.zohoId) {
-                    await bookingService.syncToZoho(createdBooking, room);
-                }
-            } catch (zohoErr: any) {
-                console.warn('[Webhook] Zoho sync for new booking failed (non-fatal):', zohoErr?.message);
-            }
         }
 
         await logWebhook({

@@ -261,7 +261,8 @@ export const bookingService = {
         const localBooking = await prisma.booking.create({
             data: {
                 ...bookingDataForDb,
-                id: zohoRecord.id,
+                // Let Prisma auto-generate cuid for Beds25 internal ID
+                // Only store Zoho ID in zohoId field (Bug #2 fix)
                 zohoId: zohoRecord.id,
                 status: bookingData.status || 'CONFIRMED',
             }
@@ -453,11 +454,27 @@ export const bookingService = {
                         console.log(`[ZohoService] Found by Beds24ID and updated Zoho record: ${zohoRecordId}`);
                     }
                 } catch (searchErr) {
-                    console.warn('[ZohoService] Search by Beds24ID failed, will create new:', searchErr);
+                    console.warn('[ZohoService] Search by Beds24ID failed:', searchErr);
                 }
             }
 
-            // Option C: Create new record
+            // Option B2: Search Zoho by Beds25ID (Bug #3 fix — extra dedup guard)
+            if (!zohoRecordId && localBooking.id) {
+                try {
+                    const searchResult = await zohoClient.searchRecords(
+                        `select id from ${ZOHO_MODULES.BOOKINGS} where Beds25ID = '${localBooking.id}'`
+                    );
+                    if (searchResult.data && searchResult.data.length > 0) {
+                        zohoRecordId = searchResult.data[0].id!;
+                        await zohoClient.updateRecord(ZOHO_MODULES.BOOKINGS, zohoRecordId, zohoData);
+                        console.log(`[ZohoService] Found by Beds25ID and updated Zoho record: ${zohoRecordId}`);
+                    }
+                } catch (searchErr) {
+                    console.warn('[ZohoService] Search by Beds25ID failed:', searchErr);
+                }
+            }
+
+            // Option C: Create new record (only if no existing record found)
             if (!zohoRecordId) {
                 const zohoRecord = await zohoClient.createRecord(ZOHO_MODULES.BOOKINGS, zohoData);
                 zohoRecordId = zohoRecord.id;
