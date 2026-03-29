@@ -73,6 +73,14 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
             .then(d => {
                 setData(d);
                 setLoading(false);
+                setTimeout(() => {
+                    const todayCell = document.getElementById('today-column');
+                    if (todayCell && scrollContainerRef.current) {
+                        // Scroll to the today cell horizontally, putting it near the center
+                        // Use inline: 'center' to center horizontally, block: 'nearest' to avoid vertical jumps
+                        todayCell.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }
+                }, 300);
             });
     }, []);
 
