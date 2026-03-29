@@ -218,8 +218,10 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                         {/* Months Top Bar */}
                         <div className="grid h-12 border-b border-neutral-200 items-end" style={{ gridTemplateColumns: `repeat(${data.days.length * 2}, 45px)` }}>
                             {months.map((m: any, i: number) => (
-                                <div key={i} style={{ gridColumn: `span ${m.count * 2}` }} className="flex justify-center border-r border-neutral-200 pb-2 overflow-hidden mx-auto top-2 sticky left-0 right-0 w-full h-full items-end">
-                                     <span className="text-[10px] font-black uppercase text-hotel-gold bg-white bg-opacity-80 px-4 py-1 rounded-full shadow-sm tracking-[0.2em] whitespace-nowrap sticky left-1/2 -translate-x-1/2">{m.name}</span>
+                                <div key={i} style={{ gridColumn: `span ${m.count * 2}` }} className="border-r border-neutral-200 pb-2 relative overflow-hidden h-full flex items-end">
+                                    <div className="sticky left-0 flex px-6 z-10">
+                                        <span className="text-[10px] font-black uppercase text-hotel-gold bg-white/90 backdrop-blur-sm px-4 py-1 rounded-full shadow-sm tracking-[0.2em] whitespace-nowrap border border-hotel-gold/20">{m.name}</span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
