@@ -38,6 +38,14 @@ async function generateBookingRef(): Promise<string> {
  * Called by the Alpaca website webhook handler after checkout.session.completed.
  */
 export async function POST(request: NextRequest) {
+    // TEMPORARY MAINTENANCE BLOCK: Stop new bookings while data is being corrected.
+    return withCors(
+        NextResponse.json({ 
+            error: 'System maintenance: Online bookings are temporarily paused to ensure data accuracy. Please contact us directly to secure a reservation.' 
+        }, { status: 503 }),
+        request
+    );
+
     try {
         const body = await request.json();
         const {
