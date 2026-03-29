@@ -76,25 +76,34 @@ export async function fetchBeds24Bookings(accessToken: string) {
     // Also include currently in-house guests (departed in the past 30 days)
     const departureFrom = format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
 
+    // Helper to traverse Beds24 API pagination
+    const fetchAllPages = async (url: string) => {
+        let results: any[] = [];
+        let currentUrl = url;
+        
+        while (currentUrl) {
+            const res = await fetch(currentUrl, { headers: { 'token': accessToken } });
+            if (!res.ok) throw new Error('Failed to fetch bookings from Beds24: ' + currentUrl);
+            const data = await res.json();
+            
+            const items = Array.isArray(data) ? data : (data.data || []);
+            results = results.concat(items);
+            
+            // Check for pagination link
+            if (data.pages && data.pages.nextPage) {
+                currentUrl = data.pages.nextPage;
+            } else {
+                currentUrl = '';
+            }
+        }
+        return results;
+    };
+
     // Fetch two sets: by arrival range AND current in-house by departure range
-    const [byArrivalRes, byDepartureRes] = await Promise.all([
-        fetch(`${BEDS24_API_URL}/bookings?arrivalFrom=${arrivalFrom}&arrivalTo=${arrivalTo}`, {
-            headers: { 'token': accessToken }
-        }),
-        fetch(`${BEDS24_API_URL}/bookings?departureFrom=${departureFrom}`, {
-            headers: { 'token': accessToken }
-        }),
+    const [byArrival, byDeparture] = await Promise.all([
+        fetchAllPages(`${BEDS24_API_URL}/bookings?arrivalFrom=${arrivalFrom}&arrivalTo=${arrivalTo}`),
+        fetchAllPages(`${BEDS24_API_URL}/bookings?departureFrom=${departureFrom}`),
     ]);
-
-    if (!byArrivalRes.ok) {
-        throw new Error('Failed to fetch bookings from Beds24');
-    }
-
-    const byArrivalData = await byArrivalRes.json();
-    const byDepartureData = byDepartureRes.ok ? await byDepartureRes.json() : { data: [] };
-
-    const byArrival: any[] = Array.isArray(byArrivalData) ? byArrivalData : (byArrivalData.data || []);
-    const byDeparture: any[] = Array.isArray(byDepartureData) ? byDepartureData : (byDepartureData.data || []);
 
     // Merge and deduplicate by booking ID
     const allBookings = [...byArrival];
