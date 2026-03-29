@@ -169,7 +169,32 @@ export async function GET() {
             }
         }
 
-        // 4. Check for duplicate Beds24 entries (multiple Beds24 bookings pointing to same room+dates)
+        // 4. Check for missing bookings (Beds24 has it, Beds25 does not)
+        for (const [beds24Id, b24] of beds24Map) {
+            const localBooking = beds25Bookings.find(b => b.externalId === beds24Id);
+            const b24StatusStr = b24.status as string | number;
+            const statusMapped = mapBeds24Status(b24StatusStr);
+            
+            if (!localBooking) {
+                // Ignore if it's explicitly cancelled in Beds24
+                if (statusMapped !== 'CANCELLED') {
+                    const guestName = `${b24.firstName || ''} ${b24.lastName || ''}`.trim() || 'Unknown';
+                    const arrival = b24.firstNight || b24.arrival || 'Unknown';
+                    const dateRange = `${arrival} (Beds24)`;
+                    
+                    issues.push({
+                        beds25Id: 'MISSING_IN_DB',
+                        guest: guestName,
+                        dates: dateRange,
+                        room: `Beds24 Room ID: ${b24.roomId || 'Unknown'}`,
+                        issue: 'missing_locally',
+                        detail: `CRITICAL: Beds24 booking ${beds24Id} exists remotely but is completely missing from Beds25!`,
+                    });
+                }
+            }
+        }
+
+        // 5. Check for duplicate Beds24 entries (multiple Beds24 bookings pointing to same room+dates)
         const beds24ByRoomDate = new Map<string, any[]>();
         for (const [, b24] of beds24Map) {
             const key = `${b24.roomId}-${b24.firstNight || b24.arrival}`;
