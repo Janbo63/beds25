@@ -7,6 +7,16 @@ import { useTranslations, useLocale } from 'next-intl';
 import BookingModal from './BookingModal';
 import MassRateUpdateModal from './MassRateUpdateModal';
 
+// Icons for tooltip styling
+const iconMap: Record<string, string> = {
+    AIRBNB: '🏠',
+    BOOKING: '✈️',
+    PRIVATE: '🤫',
+    BLOCKED: '🔒',
+    CANCELLED: '❌',
+    DIRECT: '✨'
+};
+
 interface TapeChartProps {
     onCellClick?: (data: { roomNumber: string; roomId: string; checkIn: string }) => void;
 }
@@ -16,15 +26,18 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
     const [loading, setLoading] = useState(true);
     const [selectedBooking, setSelectedBooking] = useState<any>(null);
     const [massUpdateRoom, setMassUpdateRoom] = useState<{ id: string, number: string } | null>(null);
+    
+    // Quick price edit
     const [editingCell, setEditingCell] = useState<{ roomId: string, date: string } | null>(null);
     const [tempPrice, setTempPrice] = useState<string>('');
+    
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    // Smooth drag-to-scroll implementation
     const t = useTranslations('Dashboard');
     const locale = useLocale();
     const dateLocale = locale === 'pl' ? pl : enUS;
 
+    // Draggable scroll state
     const [isDragging, setIsDragging] = useState(false);
     const [hasDragged, setHasDragged] = useState(false);
     const [startX, setStartX] = useState(0);
@@ -47,7 +60,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
         const x = e.pageX - scrollContainerRef.current.offsetLeft;
         const walk = (x - startX) * 1.5;
 
-        // If moved significantly, consider it a drag and block clicks
+        // Threshold to distinguish click vs drag
         if (Math.abs(x - startX) > 5) {
             setHasDragged(true);
             scrollContainerRef.current.scrollLeft = scrollLeft - walk;
@@ -60,23 +73,13 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
             .then(d => {
                 setData(d);
                 setLoading(false);
-                // Scroll to today by default after a short delay
-                setTimeout(() => {
-                    const todayCell = document.querySelector('.today-indicator');
-                    if (todayCell && scrollContainerRef.current) {
-                        todayCell.scrollIntoView({ behavior: 'smooth', inline: 'center' });
-                    }
-                }, 500);
             });
     }, []);
 
     const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    // Calculate consistent row assignments for overlapping bookings
+    // Layout Engine: Row placement for overlapping bookings
     const bookingRows = React.useMemo(() => {
         if (!data?.rooms) return {};
         const rowMap: Record<number, Record<number, number>> = {};
@@ -84,17 +87,17 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
         data.rooms.forEach((room: any) => {
             rowMap[room.id] = {};
             
-            // Sort bookings: checkIn asc, active before cancelled
+            // Sort: active before cancelled, then chronological
             const sortedBookings = [...room.bookings].sort((a: any, b: any) => {
                 const checkInA = new Date(a.checkIn).getTime();
                 const checkInB = new Date(b.checkIn).getTime();
-                if (checkInA !== checkInB) return checkInA - checkInB;
+                
                 if (a.status !== 'CANCELLED' && b.status === 'CANCELLED') return -1;
                 if (a.status === 'CANCELLED' && b.status !== 'CANCELLED') return 1;
-                return 0;
+                return checkInA - checkInB;
             });
 
-            // Greedy interval coloring algorithm
+            // Greedy fit
             const rowsActive: any[][] = [];
             sortedBookings.forEach((b: any) => {
                 let rowFound = -1;
@@ -118,11 +121,11 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
         return rowMap;
     }, [data]);
 
-    if (loading || !data || !mounted) return <div className="p-8 text-neutral-500">Loading chart...</div>;
+    if (loading || !data || !mounted) return <div className="p-8 text-neutral-500 font-bold uppercase tracking-widest text-sm animate-pulse">{t('timeline')}...</div>;
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-    // Group days by month for the orientation header
+    // Build month headers based on consecutive days
     const months = data.days.reduce((acc: any[], day: string) => {
         const monthName = format(parseISO(day), 'MMMM yyyy', { locale: dateLocale });
         if (acc.length === 0 || acc[acc.length - 1].name !== monthName) {
@@ -133,190 +136,159 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
         return acc;
     }, []);
 
+    // CSS Grid Column Math helper (Half-Day Resolution)
+    const getGridSpan = (bCheckIn: string, bCheckOut: string, windowDays: string[]) => {
+        const windowStartStr = windowDays[0];
+        const windowEndStr = windowDays[windowDays.length - 1];
+
+        const inStr = typeof bCheckIn === 'string' ? bCheckIn.slice(0, 10) : format(new Date(bCheckIn), 'yyyy-MM-dd');
+        const outStr = typeof bCheckOut === 'string' ? bCheckOut.slice(0, 10) : format(new Date(bCheckOut), 'yyyy-MM-dd');
+
+        if (outStr <= windowStartStr) return null;
+        if (inStr > windowEndStr) return null;
+
+        let startLine = 1;
+        let endLine = windowDays.length * 2 + 1;
+
+        const startIndex = windowDays.indexOf(inStr);
+        if (startIndex !== -1) {
+            startLine = startIndex * 2 + 2; // Check-in strictly begins Afternoon (PM)
+        }
+
+        const endIndex = windowDays.indexOf(outStr);
+        if (endIndex !== -1) {
+            endLine = endIndex * 2 + 2; // Check-out strictly ends after Morning (AM)
+        }
+
+        if (startLine >= endLine) return null;
+        return `${startLine} / ${endLine}`;
+    };
+
+    const getBookingColor = (b: any) => {
+        if (b.status === 'CANCELLED') return 'bg-neutral-200 text-neutral-500 border border-neutral-300 opacity-80';
+        if (b.isPrivate) return 'bg-neutral-900 text-white shadow-md border-b-2 border-black/20';
+        if (b.status === 'BLOCKED') return 'bg-neutral-200 text-neutral-500 border border-neutral-300 ring-2 ring-inset ring-neutral-300 pattern-diagonal-lines-sm opacity-60';
+        if (b.status === 'REQUEST') return 'bg-amber-500 text-white shadow-md border-b-2 border-black/20';
+        if (b.source?.toUpperCase() === 'AIRBNB') return 'bg-[#FF5A5F] text-white shadow-md border-b-2 border-black/20';
+        if (b.source?.toUpperCase()?.includes('BOOKING')) return 'bg-[#003580] text-white shadow-md border-b-2 border-black/20';
+        return 'bg-alpaca-green text-white shadow-md border-b-2 border-black/20';
+    };
+
+    const getIcon = (b: any) => {
+        if (b.status === 'CANCELLED') return iconMap.CANCELLED;
+        if (b.isPrivate) return iconMap.PRIVATE;
+        if (b.status === 'BLOCKED') return iconMap.BLOCKED;
+        if (b.source?.toUpperCase() === 'AIRBNB') return iconMap.AIRBNB;
+        if (b.source?.toUpperCase()?.includes('BOOKING')) return iconMap.BOOKING;
+        return iconMap.DIRECT;
+    };
+
     return (
-        <>
+        <div className="flex flex-col rounded-2xl border border-neutral-200 dark:border-white/5 bg-white shadow-2xl overflow-hidden h-[85vh]">
+            
+            {/* Scrollable Container */}
             <div
                 ref={scrollContainerRef}
                 onMouseDown={handleMouseDown}
                 onMouseLeave={handleMouseLeaveOrUp}
                 onMouseUp={handleMouseLeaveOrUp}
                 onMouseMove={handleMouseMove}
-                className={`overflow-x-auto relative rounded-3xl border border-neutral-200 dark:border-white/5 bg-white/80 dark:bg-neutral-900/20 backdrop-blur-sm shadow-2xl select-none cursor-grab active:cursor-grabbing ${isDragging ? 'grabbing' : ''}`}
+                className={`flex-1 overflow-x-auto overflow-y-auto relative select-none cursor-grab active:cursor-grabbing ${isDragging ? 'grabbing' : ''}`}
             >
-                <table className="w-full border-collapse">
-                    <thead>
-                        <tr className="bg-neutral-100/60 dark:bg-neutral-800/60">
-                            <th className="border-r border-neutral-200 dark:border-white/5 sticky left-0 bg-white dark:bg-neutral-900 z-50 w-[300px] min-w-[300px] p-4 text-left shadow-2xl">
-                                <span className="text-[10px] font-black uppercase text-neutral-500 tracking-[0.2em]">{t('timeline')}</span>
-                            </th>
-                            {months.map((month: any, i: number) => (
-                                <th
-                                    key={i}
-                                    colSpan={month.count}
-                                    className="p-0 border-r border-neutral-200 dark:border-white/5 bg-neutral-50/40 dark:bg-neutral-900/40 relative h-12"
-                                >
-                                    <div className="sticky left-[300px] right-0 flex justify-center px-4 w-[calc(100vw-350px)] max-w-full">
-                                        <div className="bg-neutral-200/80 dark:bg-neutral-800/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-neutral-300 dark:border-white/10 shadow-lg flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-hotel-gold animate-pulse"></span>
-                                            <span className="text-[10px] font-black uppercase text-hotel-gold tracking-widest whitespace-nowrap">
-                                                {month.name}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </th>
+                {/* Global Header Layout Container */}
+                <div className="flex bg-neutral-100/95 sticky top-0 z-50 backdrop-blur-md border-b-2 border-neutral-300 shadow-[0_4px_10px_-5px_rgba(0,0,0,0.1)] min-w-max">
+                    
+                    {/* Top Left Fixed Header */}
+                    <div className="w-[300px] shrink-0 sticky left-0 z-50 bg-inherit border-r border-neutral-300 p-6 flex flex-col justify-end">
+                        <span className="text-[12px] font-black uppercase text-neutral-400 tracking-[0.3em]">{t('timeline')}</span>
+                        <span className="text-[10px] font-bold text-neutral-500">{data.rooms.length} Units</span>
+                    </div>
+
+                    {/* Top Right Grid Column (Months & Days) */}
+                    <div className="flex-1 flex flex-col min-w-max relative z-20">
+                        
+                        {/* Months Top Bar */}
+                        <div className="flex h-12 border-b border-neutral-200 items-end">
+                            {months.map((m: any, i: number) => (
+                                <div key={i} style={{ width: `calc((100% / ${data.days.length}) * ${m.count})` }} className="flex justify-center border-r border-neutral-200 pb-2 overflow-hidden mx-auto top-2 sticky left-0 right-0">
+                                     <span className="text-[10px] font-black uppercase text-hotel-gold bg-white bg-opacity-80 px-4 py-1 rounded-full shadow-sm tracking-[0.2em] whitespace-nowrap">{m.name}</span>
+                                </div>
                             ))}
-                        </tr>
-                        <tr className="bg-neutral-50/20 dark:bg-neutral-800/20">
-                            <th className="p-8 text-left border-r border-neutral-200 dark:border-white/5 sticky left-0 bg-white dark:bg-neutral-900 z-50 w-[300px] min-w-[300px]">
-                                <span className="text-[9px] uppercase font-black tracking-[0.3em] text-neutral-600">{t('unit')}</span>
-                            </th>
+                        </div>
+                        
+                        {/* Days Grid */}
+                        <div className="grid h-[70px]" style={{ gridTemplateColumns: `repeat(${data.days.length * 2}, minmax(45px, 1fr))` }}>
                             {data.days.map((day: string) => {
                                 const isToday = day === todayStr;
                                 return (
-                                    <th key={day} className={`p-2 border-r border-neutral-200 dark:border-white/5 text-center min-w-[70px] transition-colors ${isToday ? 'bg-hotel-gold/5' : ''}`}>
-                                        <div className={`text-[10px] uppercase font-bold tracking-widest ${isToday ? 'text-hotel-gold' : 'text-neutral-600'}`}>
+                                    <div key={day} className={`col-span-2 border-r border-neutral-200 flex flex-col items-center justify-center relative ${isToday ? 'bg-hotel-gold/10' : ''}`}>
+                                        <span className={`text-[10px] uppercase font-bold tracking-widest leading-none ${isToday ? 'text-hotel-gold' : 'text-neutral-500'}`}>
                                             {format(parseISO(day), 'EEE', { locale: dateLocale })}
-                                        </div>
-                                        <div className={`text-xl font-black ${isToday ? 'text-hotel-gold' : 'text-neutral-700 dark:text-white/80'}`}>
+                                        </span>
+                                        <span className={`text-2xl font-black mt-1.5 leading-none ${isToday ? 'text-hotel-gold' : 'text-neutral-800'}`}>
                                             {format(parseISO(day), 'd')}
-                                        </div>
-                                        {isToday && <div className="today-indicator text-[8px] font-black text-hotel-gold uppercase mt-1 px-2 py-0.5 bg-hotel-gold/10 rounded-full">{t('today')}</div>}
-                                    </th>
+                                        </span>
+                                    </div>
                                 );
                             })}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200 dark:divide-white/5">
-                        {data.rooms.map((room: any) => (
-                            <tr key={room.id} className="group hover:bg-neutral-50/50 dark:hover:bg-white/[0.01] transition-all">
-                                <td
-                                    className="p-8 border-r border-neutral-200 dark:border-white/5 sticky left-0 bg-white/98 dark:bg-neutral-900/98 z-30 font-bold whitespace-nowrap shadow-2xl transition-colors group-hover:bg-neutral-50 dark:group-hover:bg-neutral-800 cursor-pointer hover:text-hotel-gold"
-                                    onClick={() => setMassUpdateRoom({ id: room.id, number: room.number })}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-hotel-gold shadow-[0_0_10px_rgba(166,138,93,0.3)] group-hover:scale-125 transition-transform"></div>
-                                        <div className="flex flex-col text-left">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-lg text-neutral-800 dark:text-white font-black tracking-tight leading-tight">{room.internalName || room.name}</span>
-                                                <span className="text-sm opacity-0 group-hover:opacity-100 transition-opacity" title="Mass Rate Update">💰</span>
-                                            </div>
-                                            <div className="text-[9px] text-neutral-500 font-bold uppercase tracking-[0.2em] mt-0.5">{room.number}</div>
-                                        </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Rooms Content Scroll Area */}
+                <div className="flex flex-col min-w-max pb-32">
+                    {data.rooms.map((room: any) => (
+                        <div key={room.id} className="flex border-b border-neutral-200 group/room min-h-[96px] bg-white">
+                            
+                            {/* Left Room Header - Fixed */}
+                            <div 
+                                className="w-[300px] shrink-0 sticky left-0 z-40 bg-inherit border-r border-neutral-200 flex flex-col justify-center px-6 py-4 transition-colors shadow-[2px_0_15px_-3px_rgba(0,0,0,0.05)] cursor-pointer group-hover/room:bg-neutral-50"
+                                onClick={() => setMassUpdateRoom({ id: room.id, number: room.number })}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-hotel-gold shadow-[0_0_10px_rgba(166,138,93,0.3)] shrink-0"></div>
+                                    <div className="flex flex-col overflow-hidden">
+                                        <span className="text-lg text-neutral-800 font-black tracking-tight leading-tight group-hover/room:text-hotel-gold transition-colors truncate w-full" title={room.internalName || room.name}>
+                                            {room.internalName || room.name}
+                                        </span>
+                                        <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-[0.2em] mt-1 shrink-0">{room.number}</span>
                                     </div>
-                                </td>
-                                {data.days.map((day: string) => {
-                                    // Find a booking that SPANS this day (check-in <= day < check-out)
-                                    // Find bookings that SPAN this day (check-in <= day < check-out)
-                                    const stayBookings = room.bookings.filter((b: any) => {
-                                        const bCheckIn = typeof b.checkIn === 'string' ? b.checkIn.slice(0, 10) : format(new Date(b.checkIn), 'yyyy-MM-dd');
-                                        const bCheckOut = typeof b.checkOut === 'string' ? b.checkOut.slice(0, 10) : format(new Date(b.checkOut), 'yyyy-MM-dd');
-                                        return (day >= bCheckIn && day < bCheckOut);
-                                    });
+                                </div>
+                            </div>
 
-                                    // Find bookings that CHECK OUT on this day (right-half overlap)
-                                    const departingBookings = room.bookings.filter((b: any) => {
-                                        const bCheckOut = typeof b.checkOut === 'string' ? b.checkOut.slice(0, 10) : format(new Date(b.checkOut), 'yyyy-MM-dd');
-                                        return day === bCheckOut;
-                                    });
-
-                                    const isToday = day === todayStr;
-
-                                    // Helper to get check-in/check-out strings
-                                    const getDateStr = (b: any, field: 'checkIn' | 'checkOut') =>
-                                        typeof b[field] === 'string' ? b[field].slice(0, 10) : format(new Date(b[field]), 'yyyy-MM-dd');
-
-                                    // Get price for this date
-                                    const roomPrice = room.prices?.[day]?.price || room.basePrice;
-                                    const isEditing = editingCell?.roomId === room.id && editingCell?.date === day;
-
-                                    // Determine if NEITHER booking covers this cell
-                                    const hasAnyBooking = stayBookings.length > 0 || departingBookings.length > 0;
-                                    const totalBookingsOverlap = stayBookings.length + departingBookings.length;
-
-                                    // Color function for booking blocks
-                                    const getBookingColor = (b: any) => (
-                                        b.isPrivate ? 'bg-fuchsia-800 text-white' :
-                                            b.status === 'BLOCKED' ? 'bg-neutral-800 text-neutral-500' :
-                                                b.status === 'CANCELLED' ? 'bg-neutral-400 text-white/90' :
-                                                    b.status === 'REQUEST' ? 'bg-amber-600 text-white' :
-                                                        b.source?.toUpperCase() === 'AIRBNB' ? 'bg-[#FF5A5F] text-white' :
-                                                            b.source?.toUpperCase()?.includes('BOOKING') ? 'bg-[#003580] text-white' :
-                                                                'bg-alpaca-green text-white'
-                                    );
-
-                                    // Compute center day for label rendering (account for half-day check-in)
-                                    const getCenterInfo = (b: any, bCheckIn: string, bCheckOut: string) => {
-                                        const checkInDate = new Date(bCheckIn + 'T12:00:00');
-                                        const checkOutDate = new Date(bCheckOut + 'T12:00:00');
-                                        const numNights = Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (24 * 60 * 60 * 1000));
-                                        const currentDate = new Date(day + 'T12:00:00');
-                                        const dayIndex = Math.round((currentDate.getTime() - checkInDate.getTime()) / (24 * 60 * 60 * 1000));
-                                        // Shift center right to account for half-cell on check-in day
-                                        const centerIndex = Math.ceil(numNights / 2);
-                                        return { isCenterDay: dayIndex === centerIndex, numNights };
-                                    };
-
-                                    // Booking label renderer
-                                    const renderBookingLabel = (b: any) => {
-                                        const icon = b.isPrivate ? '🤫' : b.status === 'BLOCKED' ? '🔒' : b.source?.toUpperCase() === 'AIRBNB' ? '🏠' : b.source?.toUpperCase()?.includes('BOOKING') ? '✈️' : '✨';
-                                        const nameText = b.status === 'BLOCKED' ? (b.guestName || 'Blocked') : b.status === 'CANCELLED' ? 'Cancelled' : b.guestName;
+                            {/* Right Grid Content (Bookings & Dates) */}
+                            <div className="flex-1 relative group-hover/room:bg-neutral-50/50 transition-colors">
+                                
+                                {/* Background Cells Grid (Absolute so it spans full height) */}
+                                <div className="absolute inset-0 grid h-full z-0" style={{ gridTemplateColumns: `repeat(${data.days.length * 2}, minmax(45px, 1fr))` }}>
+                                    {data.days.map((day: string) => {
+                                        const isToday = day === todayStr;
+                                        const price = room.prices?.[day]?.price || room.basePrice || 0;
+                                        const isEditing = editingCell?.roomId === room.id && editingCell?.date === day;
+                                        
                                         return (
-                                            <div className="sticky left-0 right-0 flex items-center justify-center gap-1 w-full px-1 overflow-hidden whitespace-nowrap h-full">
-                                                <span className="opacity-90 text-[10px] leading-none">{icon}</span>
-                                                {b.totalPrice > 0 && !b.isPrivate && (
-                                                    <span className="font-bold text-white whitespace-nowrap border-r border-white/30 pr-1 mr-0.5 text-[9px] leading-none">
-                                                        {b.totalPrice} zł
-                                                    </span>
-                                                )}
-                                                <span className="truncate max-w-[140px] font-bold tracking-tight leading-none text-[10px]">
-                                                    {nameText}
-                                                </span>
-                                            </div>
-                                        );
-                                    };
-
-                                    return (
-                                        <td
-                                            key={day}
-                                            className={`p-0 h-24 text-center day-cell relative transition-all group border-r border-neutral-200/50 dark:border-white/[0.03] ${isToday ? 'bg-hotel-gold/[0.02]' : ''
-                                                } ${!hasAnyBooking && !isEditing ? 'hover:bg-alpaca-green/[0.05] cursor-pointer' : ''
-                                                } ${isEditing ? 'bg-hotel-gold/10' : ''
-                                                }`}
-                                            onClick={() => {
-                                                if (hasDragged) return;
-                                                if (stayBookings.length > 0) {
-                                                    setSelectedBooking(stayBookings[0]);
-                                                } else if (departingBookings.length > 0) {
-                                                    setSelectedBooking(departingBookings[0]);
-                                                } else if (!isEditing && onCellClick) {
-                                                    onCellClick({
-                                                        roomNumber: room.number,
-                                                        roomId: room.id,
-                                                        checkIn: day
-                                                    });
-                                                }
-                                            }}
-                                            onDoubleClick={(e) => {
-                                                if (hasDragged) return;
-                                                if (stayBookings.length > 0) {
-                                                    setSelectedBooking(stayBookings[0]);
-                                                } else if (departingBookings.length > 0) {
-                                                    setSelectedBooking(departingBookings[0]);
-                                                } else {
-                                                    e.stopPropagation();
+                                            <div 
+                                                key={day} 
+                                                className={`col-span-2 border-r border-neutral-100 flex flex-col justify-end items-center pb-2 cursor-pointer hover:bg-black/[0.03] transition-colors group/cell ${isToday ? 'bg-hotel-gold/[0.03]' : ''} ${isEditing ? 'bg-hotel-gold/5 z-50' : ''}`}
+                                                onDoubleClick={() => {
+                                                    if (hasDragged) return;
                                                     setEditingCell({ roomId: room.id, date: day });
-                                                    setTempPrice(roomPrice?.toString() || '');
-                                                }
-                                            }}
-                                        >
-                                            {/* Price shown when no booking occupies the full cell */}
-                                            {!hasAnyBooking && (
-                                                <div className="flex flex-col items-center justify-center h-full">
+                                                    setTempPrice(price.toString());
+                                                }}
+                                                onClick={() => {
+                                                    if (!hasDragged && onCellClick && !isEditing) {
+                                                        // Pass checkIn event
+                                                        onCellClick({ roomNumber: room.number, roomId: room.id, checkIn: day });
+                                                    }
+                                                }}
+                                            >
+                                                {/* Price indicator */}
+                                                <div className={`text-[10px] font-bold opacity-30 group-hover/cell:opacity-100 transition-opacity ${isEditing ? 'opacity-100 text-hotel-gold' : ''}`}>
                                                     {isEditing ? (
                                                         <input
                                                             autoFocus
                                                             type="number"
-                                                            className="w-full h-full bg-hotel-gold/20 border-2 border-hotel-gold text-center font-black text-sm outline-none"
+                                                            className="w-16 bg-white border border-hotel-gold text-center font-black text-sm outline-none rounded-sm shadow-sm"
                                                             value={tempPrice}
                                                             onChange={(e) => setTempPrice(e.target.value)}
                                                             onBlur={async () => {
@@ -324,127 +296,81 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                                     await fetch('/api/dashboard/rates', {
                                                                         method: 'POST',
                                                                         headers: { 'Content-Type': 'application/json' },
-                                                                        body: JSON.stringify({
-                                                                            roomId: editingCell?.roomId,
-                                                                            date: editingCell?.date,
-                                                                            price: tempPrice
-                                                                        })
+                                                                        body: JSON.stringify({ roomId: room.id, date: day, price: tempPrice })
                                                                     });
                                                                     const updatedData = { ...data };
-                                                                    const roomIndex = updatedData.rooms.findIndex((r: any) => r.id === editingCell?.roomId);
+                                                                    const roomIndex = updatedData.rooms.findIndex((r: any) => r.id === room.id);
                                                                     if (roomIndex !== -1) {
-                                                                        if (!updatedData.rooms[roomIndex].prices) {
-                                                                            updatedData.rooms[roomIndex].prices = {};
-                                                                        }
-                                                                        updatedData.rooms[roomIndex].prices[editingCell?.date || ''] = {
-                                                                            price: parseFloat(tempPrice)
-                                                                        };
+                                                                        if (!updatedData.rooms[roomIndex].prices) updatedData.rooms[roomIndex].prices = {};
+                                                                        updatedData.rooms[roomIndex].prices[day] = { price: parseFloat(tempPrice) };
                                                                         setData(updatedData);
                                                                     }
-                                                                } catch (error) {
-                                                                    console.error('Failed to save rate:', error);
                                                                 } finally {
                                                                     setEditingCell(null);
                                                                 }
                                                             }}
                                                             onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') {
-                                                                    e.currentTarget.blur();
-                                                                } else if (e.key === 'Escape') {
-                                                                    setEditingCell(null);
-                                                                }
+                                                                if (e.key === 'Enter') e.currentTarget.blur();
+                                                                if (e.key === 'Escape') setEditingCell(null);
                                                             }}
                                                         />
                                                     ) : (
-                                                        <span className="text-[11px] font-black text-neutral-600 group-hover:text-neutral-400 transition-colors">
-                                                            {Math.round(roomPrice)} zł
-                                                        </span>
+                                                        `${Math.round(price)} zł`
                                                     )}
                                                 </div>
-                                            )}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
 
-                                            {/* DEPARTING bookings — left half of cell (checkout day) */}
-                                            {departingBookings.map((departBooking: any, idx: number) => {
-                                                const departCheckIn = getDateStr(departBooking, 'checkIn');
-                                                const departCheckOut = getDateStr(departBooking, 'checkOut');
-                                                const heightPx = 24;
-                                                const row = bookingRows[room.id]?.[departBooking.id] || 0;
-                                                const topOffset = `${row * 28 + 4}px`;
-                                                
-                                                return (
-                                                    <div
-                                                        key={`depart-${departBooking.id}`}
-                                                        onClick={(e) => { e.stopPropagation(); setSelectedBooking(departBooking); }}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: topOffset,
-                                                            bottom: 'auto',
-                                                            height: `${heightPx}px`,
-                                                            left: '0px',
-                                                            right: '50%',
-                                                            borderRadius: '0 4px 4px 0',
-                                                            zIndex: 10 + row,
-                                                            border: 'none',
-                                                        }}
-                                                        className={`flex items-center justify-center text-[10px] font-black uppercase shadow-sm cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-visible ${getBookingColor(departBooking)}`}
-                                                    >
-                                                        {(() => {
-                                                            const { isCenterDay, numNights } = getCenterInfo(departBooking, departCheckIn, departCheckOut);
-                                                            return (numNights === 1 || isCenterDay) ? renderBookingLabel(departBooking) : null;
-                                                        })()}
-                                                    </div>
-                                                );
-                                            })}
+                                {/* Interactive Bookings Area - Stacking Grid Rows */}
+                                <div 
+                                    className="relative grid h-full w-full py-3 px-[2px] gap-y-1.5 z-10 pointer-events-none" 
+                                    style={{ 
+                                        gridTemplateColumns: `repeat(${data.days.length * 2}, minmax(45px, 1fr))`,
+                                        gridAutoRows: 'max-content'
+                                    }}
+                                >
+                                    {room.bookings.map((b: any) => {
+                                        const span = getGridSpan(b.checkIn, b.checkOut, data.days);
+                                        if (!span) return null; // Outside viewport
+                                        
+                                        const rowTrack = (bookingRows[room.id]?.[b.id] ?? 0) + 1;
+                                        const colorStr = getBookingColor(b);
+                                        const iconStr = getIcon(b);
+                                        
+                                        const isCancelled = b.status === 'CANCELLED';
+                                        const bCheckInDay = typeof b.checkIn === 'string' ? b.checkIn.slice(0, 10) : format(new Date(b.checkIn), 'yyyy-MM-dd');
+                                        const bCheckOutDay = typeof b.checkOut === 'string' ? b.checkOut.slice(0, 10) : format(new Date(b.checkOut), 'yyyy-MM-dd');
+                                        const nameText = b.status === 'BLOCKED' ? (b.guestName || 'Blocked') : isCancelled ? `${b.guestName} (Cancelled)` : b.guestName;
 
-                                            {/* STAYING bookings — right half on check-in day, full on middle days */}
-                                            {stayBookings.map((stayBooking: any) => {
-                                                const stayCheckIn = getDateStr(stayBooking, 'checkIn');
-                                                const stayCheckOut = getDateStr(stayBooking, 'checkOut');
-                                                const isCheckInDay = day === stayCheckIn;
-                                                
-                                                const heightPx = 24;
-                                                const row = bookingRows[room.id]?.[stayBooking.id] || 0;
-                                                const topOffset = `${row * 28 + 4}px`;
-                                                
-                                                return (
-                                                    <div
-                                                        key={`stay-${stayBooking.id}`}
-                                                        onClick={(e) => { e.stopPropagation(); setSelectedBooking(stayBooking); }}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: topOffset,
-                                                            bottom: 'auto',
-                                                            height: `${heightPx}px`,
-                                                            left: isCheckInDay ? '50%' : '0px',
-                                                            right: '0px',
-                                                            borderRadius: isCheckInDay ? '4px 0 0 4px' : '0',
-                                                            zIndex: 10 + row,
-                                                            border: 'none',
-                                                        }}
-                                                        className={`flex items-center justify-center text-[10px] font-black uppercase shadow-sm cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-visible ${getBookingColor(stayBooking)}`}
-                                                    >
-                                                        {(() => {
-                                                            const { isCenterDay } = getCenterInfo(stayBooking, stayCheckIn, stayCheckOut);
-                                                            return isCenterDay ? renderBookingLabel(stayBooking) : null;
-                                                        })()}
-                                                    </div>
-                                                );
-                                            })}
-                                        </td>
-                                    );
-                                })}
-
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                        return (
+                                            <div 
+                                                key={b.id}
+                                                style={{ gridColumn: span, gridRow: rowTrack }}
+                                                className={`pointer-events-auto h-[34px] rounded-[4px] flex items-center px-3 cursor-pointer transition-all active:scale-[0.99] hover:brightness-110 overflow-hidden relative z-20 ${colorStr} ${isCancelled ? 'z-10 bg-[length:10px_10px] bg-[repeating-linear-gradient(45deg,transparent,transparent_5px,rgba(0,0,0,0.05)_5px,rgba(0,0,0,0.05)_10px)]' : ''}`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (!hasDragged) setSelectedBooking(b);
+                                                }}
+                                                title={`${nameText} | ${bCheckInDay} to ${bCheckOutDay} | ${b.totalPrice > 0 ? b.totalPrice + ' zł' : ''}`}
+                                            >
+                                               <span className="text-[12px] mr-1.5 opacity-90 shrink-0 leading-none">{iconStr}</span>
+                                               <span className={`text-[11px] font-black uppercase tracking-wide truncate leading-none mt-0.5 ${isCancelled ? 'line-through opacity-70' : ''}`}>
+                                                   {nameText}
+                                               </span>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {selectedBooking && (
-                <BookingModal
-                    booking={selectedBooking}
-                    onClose={() => setSelectedBooking(null)}
-                />
+                <BookingModal booking={selectedBooking} onClose={() => setSelectedBooking(null)} />
             )}
 
             {massUpdateRoom && (
@@ -456,13 +382,10 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                         setLoading(true);
                         fetch('/api/dashboard/tape-chart')
                             .then(res => res.json())
-                            .then(d => {
-                                setData(d);
-                                setLoading(false);
-                            });
+                            .then(d => { setData(d); setLoading(false); });
                     }}
                 />
             )}
-        </>
+        </div>
     );
 }
