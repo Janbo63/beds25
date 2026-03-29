@@ -60,10 +60,20 @@ async function runCleanup() {
 
     for (const ghost of ghostRecords) {
         try {
-            // Delete from Beds25 DB
-            await prisma.booking.delete({ where: { id: ghost.beds25Id } });
-            results.ghostsDeleted.push(`${ghost.guest}: ${ghost.beds25Id}`);
-            console.log(`[Cleanup] Deleted ghost Beds25 record: ${ghost.beds25Id} (${ghost.guest})`);
+            // First check if record exists
+            const existing = await prisma.booking.findUnique({ where: { id: ghost.beds25Id } });
+            if (!existing) {
+                results.errors.push(`Beds25 ${ghost.beds25Id} (${ghost.guest}): record not found in DB`);
+                // Try finding by matching zohoId instead
+                const byZoho = await prisma.booking.findFirst({ where: { zohoId: ghost.zohoId } });
+                if (byZoho) {
+                    await prisma.booking.delete({ where: { id: byZoho.id } });
+                    results.ghostsDeleted.push(`${ghost.guest}: ${byZoho.id} (found by zohoId)`);
+                }
+            } else {
+                await prisma.booking.delete({ where: { id: ghost.beds25Id } });
+                results.ghostsDeleted.push(`${ghost.guest}: ${ghost.beds25Id}`);
+            }
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             results.errors.push(`Delete Beds25 ${ghost.beds25Id}: ${msg}`);
