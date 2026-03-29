@@ -5,14 +5,31 @@ import zohoClient from '@/lib/zoho';
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/admin/cleanup-ghosts
- * 
- * Targeted cleanup based on verified facts:
- * 1. Delete 2 ghost Beds25 records (Bug #2 artifacts) + their Zoho records
- * 2. Update all BLOCKED statuses to CONFIRMED
- * 3. Re-sync corrected records to Zoho
+ * GET /api/admin/cleanup-ghosts?confirm=true
+ * Browser-accessible version (same logic as POST)
  */
+export async function GET(req: Request) {
+    const url = new URL(req.url);
+    if (url.searchParams.get('confirm') !== 'true') {
+        return NextResponse.json({
+            message: 'Add ?confirm=true to execute cleanup',
+            actions: [
+                'Delete ghost Beds25 record for Paweł (884394000001109001)',
+                'Delete ghost Beds25 record for Pamela (884394000001130001)',
+                'Delete corresponding Zoho records',
+                'Fix all BLOCKED → CONFIRMED statuses',
+                'Re-sync to Zoho',
+            ],
+        });
+    }
+    return runCleanup();
+}
+
 export async function POST() {
+    return runCleanup();
+}
+
+async function runCleanup() {
     const results = {
         ghostsDeleted: [] as string[],
         zohoDeleted: [] as string[],
