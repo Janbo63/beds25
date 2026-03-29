@@ -76,6 +76,48 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
         setMounted(true);
     }, []);
 
+    // Calculate consistent row assignments for overlapping bookings
+    const bookingRows = React.useMemo(() => {
+        if (!data?.rooms) return {};
+        const rowMap: Record<number, Record<number, number>> = {};
+        
+        data.rooms.forEach((room: any) => {
+            rowMap[room.id] = {};
+            
+            // Sort bookings: checkIn asc, active before cancelled
+            const sortedBookings = [...room.bookings].sort((a: any, b: any) => {
+                const checkInA = new Date(a.checkIn).getTime();
+                const checkInB = new Date(b.checkIn).getTime();
+                if (checkInA !== checkInB) return checkInA - checkInB;
+                if (a.status !== 'CANCELLED' && b.status === 'CANCELLED') return -1;
+                if (a.status === 'CANCELLED' && b.status !== 'CANCELLED') return 1;
+                return 0;
+            });
+
+            // Greedy interval coloring algorithm
+            const rowsActive: any[][] = [];
+            sortedBookings.forEach((b: any) => {
+                let rowFound = -1;
+                for (let r = 0; r < rowsActive.length; r++) {
+                    const overlaps = rowsActive[r].some(existingB => {
+                        return (new Date(b.checkIn) < new Date(existingB.checkOut) && new Date(b.checkOut) > new Date(existingB.checkIn));
+                    });
+                    if (!overlaps) {
+                        rowFound = r;
+                        break;
+                    }
+                }
+                if (rowFound === -1) {
+                    rowFound = rowsActive.length;
+                    rowsActive.push([]);
+                }
+                rowsActive[rowFound].push(b);
+                rowMap[room.id][b.id] = rowFound;
+            });
+        });
+        return rowMap;
+    }, [data]);
+
     if (loading || !data || !mounted) return <div className="p-8 text-neutral-500">Loading chart...</div>;
 
     const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -195,7 +237,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                     const getBookingColor = (b: any) => (
                                         b.isPrivate ? 'bg-fuchsia-800 text-white' :
                                             b.status === 'BLOCKED' ? 'bg-neutral-800 text-neutral-500' :
-                                                b.status === 'CANCELLED' ? 'bg-rose-900/40 text-rose-400' :
+                                                b.status === 'CANCELLED' ? 'bg-neutral-400 text-white/90' :
                                                     b.status === 'REQUEST' ? 'bg-amber-600 text-white' :
                                                         b.source?.toUpperCase() === 'AIRBNB' ? 'bg-[#FF5A5F] text-white' :
                                                             b.source?.toUpperCase()?.includes('BOOKING') ? 'bg-[#003580] text-white' :
@@ -236,7 +278,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                     return (
                                         <td
                                             key={day}
-                                            className={`p-0 h-20 text-center day-cell relative transition-all group border-r border-neutral-200/50 dark:border-white/[0.03] ${isToday ? 'bg-hotel-gold/[0.02]' : ''
+                                            className={`p-0 h-24 text-center day-cell relative transition-all group border-r border-neutral-200/50 dark:border-white/[0.03] ${isToday ? 'bg-hotel-gold/[0.02]' : ''
                                                 } ${!hasAnyBooking && !isEditing ? 'hover:bg-alpaca-green/[0.05] cursor-pointer' : ''
                                                 } ${isEditing ? 'bg-hotel-gold/10' : ''
                                                 }`}
@@ -325,8 +367,9 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                             {departingBookings.map((departBooking: any, idx: number) => {
                                                 const departCheckIn = getDateStr(departBooking, 'checkIn');
                                                 const departCheckOut = getDateStr(departBooking, 'checkOut');
-                                                const heightPx = 20;
-                                                const topOffset = `${idx * 24 + 4}px`;
+                                                const heightPx = 24;
+                                                const row = bookingRows[room.id]?.[departBooking.id] || 0;
+                                                const topOffset = `${row * 28 + 4}px`;
                                                 
                                                 return (
                                                     <div
@@ -337,13 +380,13 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                             top: topOffset,
                                                             bottom: 'auto',
                                                             height: `${heightPx}px`,
-                                                            left: '-1px',
+                                                            left: '0px',
                                                             right: '50%',
                                                             borderRadius: '0 4px 4px 0',
-                                                            zIndex: 10 + idx,
-                                                            border: totalBookingsOverlap > 1 ? '1px solid rgba(255,255,255,0.3)' : 'none',
+                                                            zIndex: 10 + row,
+                                                            border: 'none',
                                                         }}
-                                                        className={`flex items-center justify-center text-[10px] font-black uppercase shadow-sm cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden ${getBookingColor(departBooking)}`}
+                                                        className={`flex items-center justify-center text-[10px] font-black uppercase shadow-sm cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-visible ${getBookingColor(departBooking)}`}
                                                     >
                                                         {(() => {
                                                             const { isCenterDay, numNights } = getCenterInfo(departBooking, departCheckIn, departCheckOut);
@@ -354,15 +397,14 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                             })}
 
                                             {/* STAYING bookings — right half on check-in day, full on middle days */}
-                                            {stayBookings.map((stayBooking: any, idx: number) => {
+                                            {stayBookings.map((stayBooking: any) => {
                                                 const stayCheckIn = getDateStr(stayBooking, 'checkIn');
                                                 const stayCheckOut = getDateStr(stayBooking, 'checkOut');
                                                 const isCheckInDay = day === stayCheckIn;
                                                 
-                                                // Offset idx by the number of departing bookings so they stack sequentially
-                                                const stackIdx = idx + departingBookings.length;
-                                                const heightPx = 20;
-                                                const topOffset = `${stackIdx * 24 + 4}px`;
+                                                const heightPx = 24;
+                                                const row = bookingRows[room.id]?.[stayBooking.id] || 0;
+                                                const topOffset = `${row * 28 + 4}px`;
                                                 
                                                 return (
                                                     <div
@@ -373,13 +415,13 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                             top: topOffset,
                                                             bottom: 'auto',
                                                             height: `${heightPx}px`,
-                                                            left: isCheckInDay ? '50%' : '-1px',
-                                                            right: '-1px',
+                                                            left: isCheckInDay ? '50%' : '0px',
+                                                            right: '0px',
                                                             borderRadius: isCheckInDay ? '4px 0 0 4px' : '0',
-                                                            zIndex: 10 + stackIdx,
-                                                            border: totalBookingsOverlap > 1 ? '1px solid rgba(255,255,255,0.3)' : 'none',
+                                                            zIndex: 10 + row,
+                                                            border: 'none',
                                                         }}
-                                                        className={`flex items-center justify-center text-[10px] font-black uppercase shadow-sm cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden ${getBookingColor(stayBooking)}`}
+                                                        className={`flex items-center justify-center text-[10px] font-black uppercase shadow-sm cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-visible ${getBookingColor(stayBooking)}`}
                                                     >
                                                         {(() => {
                                                             const { isCenterDay } = getCenterInfo(stayBooking, stayCheckIn, stayCheckOut);
