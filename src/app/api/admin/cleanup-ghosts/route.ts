@@ -44,15 +44,17 @@ async function runCleanup() {
     // with ghost Beds24 IDs that don't actually exist in Beds24
     // ========================================
     const ghostRecords = [
+        // Round 1 (already deleted): Paweł 84245492, Pamela 84245498
+        // Round 2: confirmed by user as invalid Beds24 IDs
         { 
-            externalId: '84245492', // Beds24 ID that doesn't actually exist
-            zohoId: '884394000001213028',
-            guest: 'Paweł',
+            externalId: '84245493',
+            zohoId: '884394000001208030',
+            guest: 'Agnieszka',
         },
         { 
-            externalId: '84245498', // Beds24 ID that doesn't actually exist
-            zohoId: '884394000001202038',
-            guest: 'Pamela',
+            externalId: '84245496',
+            zohoId: '884394000001252001',
+            guest: 'Katherina',
         },
     ];
 
