@@ -198,7 +198,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                 b.status === 'CANCELLED' ? 'bg-rose-900/40 text-rose-400' :
                                                     b.status === 'REQUEST' ? 'bg-amber-600 text-white' :
                                                         b.source?.toUpperCase() === 'AIRBNB' ? 'bg-[#FF5A5F] text-white' :
-                                                            b.source?.toUpperCase().includes('BOOKING') ? 'bg-[#003580] text-white' :
+                                                            b.source?.toUpperCase()?.includes('BOOKING') ? 'bg-[#003580] text-white' :
                                                                 'bg-alpaca-green text-white'
                                     );
 
@@ -222,7 +222,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                     b.isPrivate ? '🤫' :
                                                         b.status === 'BLOCKED' ? '🔒' :
                                                             b.source?.toUpperCase() === 'AIRBNB' ? '🏠' :
-                                                                b.source?.toUpperCase().includes('BOOKING') ? '✈️' : '✨'}</span>
+                                                                b.source?.toUpperCase()?.includes('BOOKING') ? '✈️' : '✨'}</span>
                                                 {b.totalPrice > 0 && !b.isPrivate && (
                                                     <span className="font-black text-white whitespace-nowrap">
                                                         {b.totalPrice} zł
