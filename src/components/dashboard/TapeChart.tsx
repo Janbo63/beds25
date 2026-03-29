@@ -215,31 +215,28 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                     };
 
                                     // Booking label renderer
-                                    const renderBookingLabel = (b: any) => (
-                                        <div className="sticky left-0 right-0 flex flex-col items-center gap-1 w-full px-2 overflow-visible whitespace-nowrap">
-                                            <div className="flex items-center gap-1.5 opacity-90">
-                                                <span className="scale-110">{
-                                                    b.isPrivate ? '🤫' :
-                                                        b.status === 'BLOCKED' ? '🔒' :
-                                                            b.source?.toUpperCase() === 'AIRBNB' ? '🏠' :
-                                                                b.source?.toUpperCase()?.includes('BOOKING') ? '✈️' : '✨'}</span>
+                                    const renderBookingLabel = (b: any) => {
+                                        const icon = b.isPrivate ? '🤫' : b.status === 'BLOCKED' ? '🔒' : b.source?.toUpperCase() === 'AIRBNB' ? '🏠' : b.source?.toUpperCase()?.includes('BOOKING') ? '✈️' : '✨';
+                                        const nameText = b.status === 'BLOCKED' ? (b.guestName || 'Blocked') : b.status === 'CANCELLED' ? 'Cancelled' : b.guestName;
+                                        return (
+                                            <div className="sticky left-0 right-0 flex items-center justify-center gap-1 w-full px-1 overflow-hidden whitespace-nowrap h-full">
+                                                <span className="opacity-90 text-[10px] leading-none">{icon}</span>
                                                 {b.totalPrice > 0 && !b.isPrivate && (
-                                                    <span className="font-black text-white whitespace-nowrap">
+                                                    <span className="font-bold text-white whitespace-nowrap border-r border-white/30 pr-1 mr-0.5 text-[9px] leading-none">
                                                         {b.totalPrice} zł
                                                     </span>
                                                 )}
+                                                <span className="truncate max-w-[140px] font-bold tracking-tight leading-none text-[10px]">
+                                                    {nameText}
+                                                </span>
                                             </div>
-                                            <span className="truncate max-w-[200px] text-center font-black tracking-tight leading-none">
-                                                {b.status === 'BLOCKED' ? (b.guestName || 'Blocked') :
-                                                    b.status === 'CANCELLED' ? 'Cancelled' : b.guestName}
-                                            </span>
-                                        </div>
-                                    );
+                                        );
+                                    };
 
                                     return (
                                         <td
                                             key={day}
-                                            className={`p-0 h-28 text-center day-cell relative transition-all group border-r border-neutral-200/50 dark:border-white/[0.03] ${isToday ? 'bg-hotel-gold/[0.02]' : ''
+                                            className={`p-0 h-20 text-center day-cell relative transition-all group border-r border-neutral-200/50 dark:border-white/[0.03] ${isToday ? 'bg-hotel-gold/[0.02]' : ''
                                                 } ${!hasAnyBooking && !isEditing ? 'hover:bg-alpaca-green/[0.05] cursor-pointer' : ''
                                                 } ${isEditing ? 'bg-hotel-gold/10' : ''
                                                 }`}
@@ -328,8 +325,8 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                             {departingBookings.map((departBooking: any, idx: number) => {
                                                 const departCheckIn = getDateStr(departBooking, 'checkIn');
                                                 const departCheckOut = getDateStr(departBooking, 'checkOut');
-                                                const heightPx = totalBookingsOverlap > 1 ? Math.max(28, 90 / totalBookingsOverlap) : undefined;
-                                                const topOffset = totalBookingsOverlap > 1 ? `${idx * heightPx! + 6}px` : '6px';
+                                                const heightPx = 20;
+                                                const topOffset = `${idx * 24 + 4}px`;
                                                 
                                                 return (
                                                     <div
@@ -338,15 +335,15 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                         style={{
                                                             position: 'absolute',
                                                             top: topOffset,
-                                                            bottom: totalBookingsOverlap > 1 ? 'auto' : '6px',
-                                                            height: totalBookingsOverlap > 1 ? `${heightPx}px` : 'auto',
+                                                            bottom: 'auto',
+                                                            height: `${heightPx}px`,
                                                             left: '-1px',
                                                             right: '50%',
-                                                            borderRadius: '0 9999px 9999px 0',
+                                                            borderRadius: '0 4px 4px 0',
                                                             zIndex: 10 + idx,
                                                             border: totalBookingsOverlap > 1 ? '1px solid rgba(255,255,255,0.3)' : 'none',
                                                         }}
-                                                        className={`flex items-center justify-center text-[10px] font-black uppercase shadow-lg cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden ${getBookingColor(departBooking)}`}
+                                                        className={`flex items-center justify-center text-[10px] font-black uppercase shadow-sm cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden ${getBookingColor(departBooking)}`}
                                                     >
                                                         {(() => {
                                                             const { isCenterDay, numNights } = getCenterInfo(departBooking, departCheckIn, departCheckOut);
@@ -364,8 +361,8 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                 
                                                 // Offset idx by the number of departing bookings so they stack sequentially
                                                 const stackIdx = idx + departingBookings.length;
-                                                const heightPx = totalBookingsOverlap > 1 ? Math.max(28, 90 / totalBookingsOverlap) : undefined;
-                                                const topOffset = totalBookingsOverlap > 1 ? `${stackIdx * heightPx! + 6}px` : '6px';
+                                                const heightPx = 20;
+                                                const topOffset = `${stackIdx * 24 + 4}px`;
                                                 
                                                 return (
                                                     <div
@@ -374,15 +371,15 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                                         style={{
                                                             position: 'absolute',
                                                             top: topOffset,
-                                                            bottom: totalBookingsOverlap > 1 ? 'auto' : '6px',
-                                                            height: totalBookingsOverlap > 1 ? `${heightPx}px` : 'auto',
+                                                            bottom: 'auto',
+                                                            height: `${heightPx}px`,
                                                             left: isCheckInDay ? '50%' : '-1px',
                                                             right: '-1px',
-                                                            borderRadius: isCheckInDay ? '9999px 0 0 9999px' : '0',
+                                                            borderRadius: isCheckInDay ? '4px 0 0 4px' : '0',
                                                             zIndex: 10 + stackIdx,
                                                             border: totalBookingsOverlap > 1 ? '1px solid rgba(255,255,255,0.3)' : 'none',
                                                         }}
-                                                        className={`flex items-center justify-center text-[10px] font-black uppercase shadow-lg cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden ${getBookingColor(stayBooking)}`}
+                                                        className={`flex items-center justify-center text-[10px] font-black uppercase shadow-sm cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden ${getBookingColor(stayBooking)}`}
                                                     >
                                                         {(() => {
                                                             const { isCenterDay } = getCenterInfo(stayBooking, stayCheckIn, stayCheckOut);
