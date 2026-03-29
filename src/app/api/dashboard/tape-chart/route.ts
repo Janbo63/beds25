@@ -16,11 +16,13 @@ export async function GET(request: NextRequest) {
         const rooms = await prisma.room.findMany({
             include: {
                 bookings: {
+                    where: {
                         OR: [
                             { checkIn: { lte: end, gte: start } },
                             { checkOut: { lte: end, gte: start } },
                             { AND: [{ checkIn: { lte: start } }, { checkOut: { gte: end } }] }
                         ]
+                    }
                 },
                 priceRules: {
                     where: {
