@@ -221,7 +221,7 @@ export async function importBeds24Data(inviteCode: string, existingRefreshToken?
             case '1': return 'CONFIRMED';
             case '2': return 'NEW';
             case '3': return 'REQUEST';
-            case '4': return 'BLOCKED';
+            case '4': return 'CONFIRMED';
             default: return 'CONFIRMED';
         }
     };
