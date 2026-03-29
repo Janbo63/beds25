@@ -74,13 +74,13 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                 setData(d);
                 setLoading(false);
                 setTimeout(() => {
-                    const todayCell = document.getElementById('today-column');
+                    const todayCell = document.querySelector('.today-indicator');
                     if (todayCell && scrollContainerRef.current) {
                         // Scroll to the today cell horizontally, putting it near the center
                         // Use inline: 'center' to center horizontally, block: 'nearest' to avoid vertical jumps
                         todayCell.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                     }
-                }, 300);
+                }, 600); // Increased timeout slightly to ensure grid is fully painted
             });
     }, []);
 
@@ -229,7 +229,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                             {data.days.map((day: string) => {
                                 const isToday = day === todayStr;
                                 return (
-                                    <div key={day} className={`col-span-2 border-r border-neutral-200 flex flex-col items-center justify-center relative ${isToday ? 'bg-hotel-gold/10' : ''}`}>
+                                    <div key={day} className={`col-span-2 border-r border-neutral-200 flex flex-col items-center justify-center relative ${isToday ? 'bg-hotel-gold/10 today-indicator' : ''}`}>
                                         <span className={`text-[10px] uppercase font-bold tracking-widest leading-none ${isToday ? 'text-hotel-gold' : 'text-neutral-500'}`}>
                                             {format(parseISO(day), 'EEE', { locale: dateLocale })}
                                         </span>
