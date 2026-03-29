@@ -45,38 +45,31 @@ async function runCleanup() {
     // ========================================
     const ghostRecords = [
         { 
-            beds25Id: '884394000001109001', 
+            externalId: '84245492', // Beds24 ID that doesn't actually exist
             zohoId: '884394000001213028',
             guest: 'Paweł',
-            reason: 'Ghost - Beds24 ID 84245492 does not exist'
         },
         { 
-            beds25Id: '884394000001130001', 
+            externalId: '84245498', // Beds24 ID that doesn't actually exist
             zohoId: '884394000001202038',
             guest: 'Pamela',
-            reason: 'Ghost - Beds24 ID 84245498 does not exist'
         },
     ];
 
     for (const ghost of ghostRecords) {
         try {
-            // First check if record exists
-            const existing = await prisma.booking.findUnique({ where: { id: ghost.beds25Id } });
-            if (!existing) {
-                results.errors.push(`Beds25 ${ghost.beds25Id} (${ghost.guest}): record not found in DB`);
-                // Try finding by matching zohoId instead
-                const byZoho = await prisma.booking.findFirst({ where: { zohoId: ghost.zohoId } });
-                if (byZoho) {
-                    await prisma.booking.delete({ where: { id: byZoho.id } });
-                    results.ghostsDeleted.push(`${ghost.guest}: ${byZoho.id} (found by zohoId)`);
-                }
+            // Delete by externalId (Beds24 ghost ID) — more reliable than by id
+            const deleted = await prisma.booking.deleteMany({
+                where: { externalId: ghost.externalId },
+            });
+            if (deleted.count > 0) {
+                results.ghostsDeleted.push(`${ghost.guest}: externalId=${ghost.externalId} (${deleted.count} records)`);
             } else {
-                await prisma.booking.delete({ where: { id: ghost.beds25Id } });
-                results.ghostsDeleted.push(`${ghost.guest}: ${ghost.beds25Id}`);
+                results.errors.push(`${ghost.guest}: externalId=${ghost.externalId} - no record found`);
             }
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
-            results.errors.push(`Delete Beds25 ${ghost.beds25Id}: ${msg}`);
+            results.errors.push(`Delete Beds25 ${ghost.externalId}: ${msg}`);
         }
 
         // Delete the corresponding Zoho record
