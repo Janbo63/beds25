@@ -216,16 +216,16 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                     <div className="flex-1 flex flex-col min-w-max relative z-20">
                         
                         {/* Months Top Bar */}
-                        <div className="flex h-12 border-b border-neutral-200 items-end">
+                        <div className="grid h-12 border-b border-neutral-200 items-end" style={{ gridTemplateColumns: `repeat(${data.days.length * 2}, 45px)` }}>
                             {months.map((m: any, i: number) => (
-                                <div key={i} style={{ width: `calc((100% / ${data.days.length}) * ${m.count})` }} className="flex justify-center border-r border-neutral-200 pb-2 overflow-hidden mx-auto top-2 sticky left-0 right-0">
-                                     <span className="text-[10px] font-black uppercase text-hotel-gold bg-white bg-opacity-80 px-4 py-1 rounded-full shadow-sm tracking-[0.2em] whitespace-nowrap">{m.name}</span>
+                                <div key={i} style={{ gridColumn: `span ${m.count * 2}` }} className="flex justify-center border-r border-neutral-200 pb-2 overflow-hidden mx-auto top-2 sticky left-0 right-0 w-full h-full items-end">
+                                     <span className="text-[10px] font-black uppercase text-hotel-gold bg-white bg-opacity-80 px-4 py-1 rounded-full shadow-sm tracking-[0.2em] whitespace-nowrap sticky left-1/2 -translate-x-1/2">{m.name}</span>
                                 </div>
                             ))}
                         </div>
                         
                         {/* Days Grid */}
-                        <div className="grid h-[70px]" style={{ gridTemplateColumns: `repeat(${data.days.length * 2}, minmax(45px, 1fr))` }}>
+                        <div className="grid h-[70px]" style={{ gridTemplateColumns: `repeat(${data.days.length * 2}, 45px)` }}>
                             {data.days.map((day: string) => {
                                 const isToday = day === todayStr;
                                 return (
@@ -268,7 +268,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                             <div className="flex-1 relative group-hover/room:bg-neutral-50/50 transition-colors">
                                 
                                 {/* Background Cells Grid (Absolute so it spans full height) */}
-                                <div className="absolute inset-0 grid h-full z-0" style={{ gridTemplateColumns: `repeat(${data.days.length * 2}, minmax(45px, 1fr))` }}>
+                                <div className="absolute inset-0 grid h-full z-0" style={{ gridTemplateColumns: `repeat(${data.days.length * 2}, 45px)` }}>
                                     {data.days.map((day: string) => {
                                         const isToday = day === todayStr;
                                         const price = room.prices?.[day]?.price || room.basePrice || 0;
@@ -335,7 +335,7 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
                                 <div 
                                     className="relative grid h-full w-full py-3 px-[2px] gap-y-1.5 z-10 pointer-events-none" 
                                     style={{ 
-                                        gridTemplateColumns: `repeat(${data.days.length * 2}, minmax(45px, 1fr))`,
+                                        gridTemplateColumns: `repeat(${data.days.length * 2}, 45px)`,
                                         gridAutoRows: 'max-content'
                                     }}
                                 >
