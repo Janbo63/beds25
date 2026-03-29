@@ -13,8 +13,12 @@ export const dynamic = 'force-dynamic';
  * Requires explicit list of Zoho IDs + confirm=true to delete orphans.
  * Also re-syncs statuses for all linked bookings.
  */
-export async function GET() {
+export async function GET(req: Request) {
     try {
+        const url = new URL(req.url);
+        const action = url.searchParams.get('action');
+        const confirm = url.searchParams.get('confirm') === 'true';
+
         // 1. Get ALL Beds25 bookings and their zohoIds
         const beds25Bookings = await prisma.booking.findMany({
             select: { id: true, zohoId: true, guestName: true, status: true, checkIn: true, checkOut: true, externalId: true },
@@ -87,7 +91,6 @@ export async function GET() {
             let reason = '';
 
             if (isLinked) {
-                // This Zoho record IS referenced by a Beds25 booking — KEEP
                 if (linkedBooking && zohoStatus.toUpperCase() !== linkedBooking.status) {
                     verdict = 'STATUS_FIX';
                     reason = `Linked to Beds25 booking "${linkedBooking.guestName}" but status differs: Zoho=${zohoStatus}, Beds25=${linkedBooking.status}`;
@@ -96,41 +99,62 @@ export async function GET() {
                     reason = `Linked to Beds25 booking "${linkedBooking?.guestName || 'unknown'}"`;
                 }
             } else {
-                // NOT referenced by any Beds25 booking — ORPHAN (safe to delete)
                 verdict = 'ORPHAN';
-                reason = 'Not linked from any Beds25 booking (no Beds25 booking has zohoId pointing to this record)';
+                reason = 'Not linked from any Beds25 booking';
             }
 
             report.push({
-                zohoId,
-                bookingName,
-                guest,
-                checkIn,
-                checkOut,
-                room,
-                beds24Id,
-                beds25Id,
-                zohoStatus,
-                verdict,
-                reason,
+                zohoId, bookingName, guest, checkIn, checkOut, room,
+                beds24Id, beds25Id, zohoStatus, verdict, reason,
                 beds25Status: linkedBooking?.status,
             });
         }
 
+        const orphans = report.filter(r => r.verdict === 'ORPHAN');
         const keepCount = report.filter(r => r.verdict === 'KEEP').length;
-        const orphanCount = report.filter(r => r.verdict === 'ORPHAN').length;
         const statusFixCount = report.filter(r => r.verdict === 'STATUS_FIX').length;
+
+        // AUTO-DELETE ORPHANS if requested
+        if (action === 'delete_all_orphans' && confirm && orphans.length > 0) {
+            const deleteResults = { deleted: 0, failed: 0, errors: [] as string[] };
+            
+            for (const orphan of orphans) {
+                try {
+                    await zohoClient.deleteRecord('Bookings', orphan.zohoId);
+                    deleteResults.deleted++;
+                } catch (err: unknown) {
+                    deleteResults.failed++;
+                    const msg = err instanceof Error ? err.message : 'Unknown';
+                    deleteResults.errors.push(`${orphan.zohoId} (${orphan.guest || orphan.bookingName}): ${msg}`);
+                }
+            }
+
+            return NextResponse.json({
+                action: 'delete_all_orphans',
+                summary: {
+                    totalZoho: allZohoRecords.length,
+                    totalBeds25: beds25Bookings.length,
+                    orphansFound: orphans.length,
+                    deleted: deleteResults.deleted,
+                    failed: deleteResults.failed,
+                    kept: keepCount + statusFixCount,
+                },
+                errors: deleteResults.errors,
+            });
+        }
 
         return NextResponse.json({
             summary: {
                 totalZoho: allZohoRecords.length,
                 totalBeds25: beds25Bookings.length,
                 linked: keepCount + statusFixCount,
-                orphans: orphanCount,
+                orphans: orphans.length,
                 statusFixes: statusFixCount,
             },
+            ...(action !== 'delete_all_orphans' ? {
+                hint: 'Add ?action=delete_all_orphans&confirm=true to delete all orphans',
+            } : {}),
             report: report.sort((a, b) => {
-                // Orphans first, then status fixes, then keeps
                 const order = { ORPHAN: 0, STATUS_FIX: 1, KEEP: 2 };
                 return order[a.verdict] - order[b.verdict];
             }),
