@@ -117,18 +117,19 @@ export async function GET(request: NextRequest) {
 
                     const rule = roomRules?.get(dateKey);
 
-                    if (rule && !rule.isAvailable) {
+                    // Reject if no explicitly defined price rule exists, or if the defined price is 0
+                    if (!rule || !rule.isAvailable || rule.price === 0) {
                         allDatesAvailable = false;
                         break;
                     }
 
                     // Check minStay override from price rules
-                    if (rule?.minStay && nights < rule.minStay) {
+                    if (rule.minStay && nights < rule.minStay) {
                         allDatesAvailable = false;
                         break;
                     }
 
-                    const nightPrice = rule?.price ?? room.basePrice;
+                    const nightPrice = rule.price;
                     totalPrice += nightPrice;
                     nightlyPrices.push({ date: dateKey, price: nightPrice });
                 }
