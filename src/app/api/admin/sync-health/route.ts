@@ -150,12 +150,24 @@ export async function GET() {
             }
         }
 
+        const zohoMissing = issues.filter(i => i.issue.startsWith('zoho') || i.issue === 'missing_zoho_id').length;
+        const beds24Missing = issues.filter(i => i.issue.startsWith('beds24') || i.issue === 'missing_beds24_id').length;
+
         return NextResponse.json({
             timestamp: new Date().toISOString(),
-            totalBookings: activeBookings.length,
-            zohoBookingsFetched: zohoMap.size,
-            beds24BookingsFetched: beds24Map.size,
-            zohoDuplicatesFound: zohoDuplicateCount,
+            total: activeBookings.length,
+            allSynced: issues.length === 0,
+            zoho: {
+                checked: zohoMap.size,
+                ok: activeBookings.length - zohoMissing,
+                missing: zohoMissing
+            },
+            beds24: {
+                checked: beds24Map.size,
+                ok: activeBookings.length - beds24Missing,
+                missing: beds24Missing
+            },
+            beds24Duplicates: zohoDuplicateCount,
             issueCount: issues.length,
             issues,
         });
