@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Refresh Token is required' }, { status: 400 });
         }
 
-        const results = await importBeds24Data(refreshToken);
+        const results = await importBeds24Data('', refreshToken);
 
         return NextResponse.json({
             message: 'Import completed successfully',

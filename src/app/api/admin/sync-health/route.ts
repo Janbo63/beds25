@@ -28,7 +28,12 @@ export async function GET() {
             if (property?.beds24RefreshToken) {
                 const accessToken = await getBeds24AccessToken(property.beds24RefreshToken);
                 const bs = await fetchBeds24Bookings(accessToken);
-                for (const b of bs) if (b.id) beds24Map.set(b.id.toString(), b);
+                const todayStr = new Date().toISOString().slice(0, 10);
+                for (const b of bs) {
+                    if (b.id && b.departure >= todayStr) {
+                        beds24Map.set(b.id.toString(), b);
+                    }
+                }
             }
         } catch (err) {
             console.warn('[SyncHealth] Could not fetch Beds24', err);

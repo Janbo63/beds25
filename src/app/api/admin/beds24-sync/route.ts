@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Step 2: Full import from Beds24 
-        const importResult = await importBeds24Data(property.beds24RefreshToken);
+        const importResult = await importBeds24Data('', property.beds24RefreshToken);
         results.import = importResult;
 
         // Step 3: Count final state
