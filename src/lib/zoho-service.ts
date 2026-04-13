@@ -82,14 +82,14 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         Payment_Method: booking.paymentMethod,
         Payment_Timing: booking.paymentTiming,
         Payment_Status: booking.paymentStatus,
-        Arrvial_Time: booking.arrivalTime,
-        BookingCom_Order_ID: booking.bookingComOrderId,
-        BookingCom_Pincode: booking.bookingComPincode,
-        Commission_Amount: booking.commissionAmount,
+        Arrival_time: booking.arrivalTime,
+        Bookingcom_order_ID: booking.bookingComOrderId,
+        Bookingcom_Pincode: booking.bookingComPincode,
+        Commission_amount: booking.commissionAmount,
         Commission_Percent: booking.commissionPercent,
-        Voucher_Code: booking.voucherCode,
-        Discount_Amount: booking.discountAmount,
-        Source_Channel: booking.source,
+        Voucher_code: booking.voucherCode,
+        Discount_amount: booking.discountAmount,
+        Channel: booking.source,
         Currency1: booking.currency,
         Private: booking.isPrivate,
         Booking_status: beds25ToZoho(booking.status),
@@ -102,7 +102,7 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         record.Guest = { id: contactId };
     }
 
-    if (roomZohoId) {
+    if (roomZohoId && /^\d{15,}$/.test(roomZohoId)) {
         record.Room = { id: roomZohoId };
     }
 
@@ -127,17 +127,17 @@ function mapZohoToBooking(zohoRecord: ZohoRecord): any {
         guestAges: zohoRecord.Guest_Ages,
         notes: zohoRecord.Booking_Notes,
         status: zohoToBeds25(zohoRecord.Booking_status),
-        source: zohoRecord.Source_Channel || 'DIRECT',
+        source: zohoRecord.Channel || 'DIRECT',
         paymentMethod: zohoRecord.Payment_Method,
         paymentTiming: zohoRecord.Payment_Timing,
-        paymentStatus: zohoRecord.Payment_Status,
-        bookingComOrderId: zohoRecord.BookingCom_Order_ID,
-        bookingComPincode: zohoRecord.BookingCom_Pincode,
-        commissionAmount: parseFloat(zohoRecord.Commission_Amount || 0),
+        paymentStatus: zohoRecord.Payment_status,
+        bookingComOrderId: zohoRecord.Bookingcom_order_ID,
+        bookingComPincode: zohoRecord.Bookingcom_Pincode,
+        commissionAmount: parseFloat(zohoRecord.Commission_amount || 0),
         commissionPercent: parseFloat(zohoRecord.Commission_Percent || 0),
-        voucherCode: zohoRecord.Voucher_Code,
-        discountAmount: parseFloat(zohoRecord.Discount_Amount || 0),
-        arrivalTime: zohoRecord.Arrival_Time,
+        voucherCode: zohoRecord.Voucher_code,
+        discountAmount: parseFloat(zohoRecord.Discount_amount || 0),
+        arrivalTime: zohoRecord.Arrival_time,
         currency: zohoRecord.Currency1 || 'EUR',
         isPrivate: zohoRecord.private === true || zohoRecord.private === 'true' || zohoRecord.Private === true || zohoRecord.Private === 'true',
     };
@@ -373,7 +373,7 @@ export const bookingService = {
 
         const response = await zohoClient.getRecords(ZOHO_MODULES.BOOKINGS, {
             per_page: 200,
-            fields: ['id', 'Guest', 'Room', 'Check_In', 'Check_Out', 'Total_Price', 'Number_of_Adults', 'Number_of_Children', 'Guest_Ages', 'Booking_Notes', 'Payment_Method', 'Payment_Timing', 'Status', 'BookingCom_Order_ID', 'Voucher_Code']
+            fields: ['id', 'Guest', 'Room', 'Check_In', 'Check_Out', 'Total_Price', 'Number_of_Adults', 'Number_of_Children', 'Guest_Ages', 'Booking_Notes', 'Payment_Method', 'Payment_Timing', 'Status', 'Bookingcom_order_ID', 'Voucher_code']
         });
 
         for (const zohoRecord of response.data) {
