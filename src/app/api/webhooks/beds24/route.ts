@@ -232,6 +232,8 @@ export async function POST(request: NextRequest) {
         const cleanReferer = isUnresolved(referer) ? 'BEDS24' : (referer || '');
         const cleanApiSource = isUnresolved(apiSource) ? '' : (apiSource || '');
 
+        const isPrivate = status?.toString() === '3';
+
         const bookingData = {
             roomId: room.id,
             roomNumber: room.number,
@@ -245,6 +247,7 @@ export async function POST(request: NextRequest) {
             numAdults: parseInt(numAdult || '1') || 1,
             numChildren: parseInt(numChild || '0') || 0,
             externalId: bookId.toString(),
+            isPrivate,
             notes: `Imported via Webhook from ${cleanReferer || 'Beds24'}`
         };
 
