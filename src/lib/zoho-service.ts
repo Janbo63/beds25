@@ -99,11 +99,11 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
     };
 
     if (contactId) {
-        record.Guest = contactId;
+        record.Guest = { id: contactId };
     }
 
     if (roomZohoId) {
-        record.Room = roomZohoId;
+        record.Room = { id: roomZohoId };
     }
 
     return record;
