@@ -45,7 +45,7 @@ async function findOrCreateContact(guestName: string, guestEmail: string): Promi
 
         // Create new contact if not found
         const [firstName, ...lastNameParts] = guestName.split(' ');
-        const lastName = lastNameParts.join(' ') || firstName;
+        const lastName = lastNameParts.join(' ') || '.';
 
         const contactData = {
             First_Name: firstName,
@@ -72,6 +72,7 @@ async function findOrCreateContact(guestName: string, guestEmail: string): Promi
 function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string): ZohoRecord {
     const record: ZohoRecord = {
         Name: `${booking.guestName} - ${booking.roomNumber || 'Room'}`,
+        Guest_Name: booking.guestName || 'Guest',
         Check_In: format(new Date(booking.checkIn), 'yyyy-MM-dd'),
         Check_Out: format(new Date(booking.checkOut), 'yyyy-MM-dd'),
         Total_Price: booking.totalPrice,
@@ -409,7 +410,7 @@ export const bookingService = {
                 } else {
                     // Create contact with name only (no email)
                     const [firstName, ...lastNameParts] = localBooking.guestName.split(' ');
-                    const lastName = lastNameParts.join(' ') || firstName;
+                    const lastName = lastNameParts.join(' ') || '.';
                     const newContact = await zohoClient.createRecord('Contacts', {
                         First_Name: firstName,
                         Last_Name: lastName,

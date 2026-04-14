@@ -8,11 +8,15 @@ import {
     Users,
     Calendar as CalendarIcon,
     Filter,
-    ArrowUpRight
+    ArrowUpRight,
+    BarChart3,
+    Table2,
 } from 'lucide-react';
+import AnalyticsDashboard from '@/components/dashboard/AnalyticsDashboard';
 
 export default function ReportsPage() {
     const t = useTranslations('Reports');
+    const [activeTab, setActiveTab] = useState<'analytics' | 'query'>('analytics');
     const [reportsData, setReportsData] = useState<any>(null);
     const [reportFilters, setReportFilters] = useState({
         startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
@@ -56,6 +60,38 @@ export default function ReportsPage() {
                     {t('exportPdf')}
                 </button>
             </header>
+
+            {/* Tab Navigation */}
+            <div className="flex gap-2 bg-neutral-100/80 dark:bg-neutral-800/50 p-1.5 rounded-2xl w-fit">
+                <button
+                    onClick={() => setActiveTab('analytics')}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                        activeTab === 'analytics'
+                            ? 'bg-white dark:bg-neutral-900 text-hotel-gold shadow-lg border border-neutral-200 dark:border-white/10'
+                            : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                    }`}
+                >
+                    <BarChart3 size={16} />
+                    Analytics Dashboard
+                </button>
+                <button
+                    onClick={() => setActiveTab('query')}
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                        activeTab === 'query'
+                            ? 'bg-white dark:bg-neutral-900 text-hotel-gold shadow-lg border border-neutral-200 dark:border-white/10'
+                            : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                    }`}
+                >
+                    <Table2 size={16} />
+                    Query Report
+                </button>
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'analytics' ? (
+                <AnalyticsDashboard />
+            ) : (
+            <>
 
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -209,6 +245,8 @@ export default function ReportsPage() {
                     </table>
                 </div>
             </section>
+            </>
+            )}
         </div>
     );
 }

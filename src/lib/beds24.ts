@@ -254,10 +254,14 @@ export async function importBeds24Data(inviteCode: string, existingRefreshToken?
                     where: { email: guestEmail },
                     update: {
                         name: guestName,
+                        firstName: b.firstName || null,
+                        lastName: b.lastName || null,
                         phone: b.phone || b.mobile || null
                     },
                     create: {
                         name: guestName,
+                        firstName: b.firstName || null,
+                        lastName: b.lastName || null,
                         email: guestEmail,
                         phone: b.phone || b.mobile || null
                     }
