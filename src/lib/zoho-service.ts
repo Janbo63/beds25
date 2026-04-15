@@ -40,7 +40,24 @@ async function findOrCreateContact(guestName: string, guestEmail: string): Promi
         const searchResult = await zohoClient.searchRecords(searchQuery);
 
         if (searchResult.data && searchResult.data.length > 0) {
-            return searchResult.data[0].id!;
+            const existingId = searchResult.data[0].id!;
+            // Update name if it changed (fixes historical "Ela Ela" style bugs)
+            const [fn, ...lnParts] = guestName.split(' ');
+            const ln = lnParts.join(' ') || '.';
+            const existingFirst = searchResult.data[0].First_Name || '';
+            const existingLast = searchResult.data[0].Last_Name || '';
+            if (existingFirst !== fn || existingLast !== ln) {
+                try {
+                    await zohoClient.updateRecord('Contacts', existingId, {
+                        First_Name: fn,
+                        Last_Name: ln,
+                    });
+                    console.log(`[ZohoService] Updated contact name: "${existingFirst} ${existingLast}" → "${fn} ${ln}"`);
+                } catch (updateErr) {
+                    console.warn('[ZohoService] Could not update contact name:', updateErr);
+                }
+            }
+            return existingId;
         }
 
         // Create new contact if not found
