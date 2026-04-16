@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { bookingService } from '@/lib/zoho-service';
 import { addDays } from 'date-fns';
 import { beds24ToBeds25 } from '@/lib/status-map';
+import { fetchSingleBeds24Booking } from '@/lib/beds24';
 
 export const dynamic = 'force-dynamic';
 
@@ -225,12 +226,29 @@ export async function POST(request: NextRequest) {
         });
 
         // Clean guest data (handle unresolved template variables)
-        const firstName = isUnresolved(guestFirstName) ? '' : (guestFirstName || '');
-        const lastName = isUnresolved(guestLastName) ? '' : (guestLastName || '');
-        const guestName = `${firstName} ${lastName}`.trim() || 'Guest';
-        const cleanEmail = isUnresolved(guestEmail) ? '' : (guestEmail || '');
+        let firstName = isUnresolved(guestFirstName) ? '' : (guestFirstName || '');
+        let lastName = isUnresolved(guestLastName) ? '' : (guestLastName || '');
+        let cleanEmail = isUnresolved(guestEmail) ? '' : (guestEmail || '');
         const cleanReferer = isUnresolved(referer) ? 'BEDS24' : (referer || '');
         const cleanApiSource = isUnresolved(apiSource) ? '' : (apiSource || '');
+
+        // Fallback: if last name is missing (unresolved template), fetch from Beds24 API
+        if (!lastName && bookId) {
+            console.log(`[Webhook] Last name missing for booking ${bookId}, fetching from Beds24 API...`);
+            try {
+                const apiBooking = await fetchSingleBeds24Booking(bookId.toString());
+                if (apiBooking) {
+                    if (apiBooking.lastName) lastName = apiBooking.lastName;
+                    if (!firstName && apiBooking.firstName) firstName = apiBooking.firstName;
+                    if (!cleanEmail && apiBooking.email) cleanEmail = apiBooking.email;
+                    console.log(`[Webhook] API fallback recovered: firstName="${firstName}" lastName="${lastName}"`);
+                }
+            } catch (apiErr: any) {
+                console.warn('[Webhook] Beds24 API fallback failed:', apiErr?.message);
+            }
+        }
+
+        const guestName = `${firstName} ${lastName}`.trim() || 'Guest';
 
         const isPrivate = status?.toString() === '3';
 

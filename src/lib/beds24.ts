@@ -69,6 +69,33 @@ export async function fetchBeds24Properties(accessToken: string) {
     return response.json();
 }
 
+/**
+ * Fetch a single booking from Beds24 by its ID.
+ * Used by the webhook handler to recover missing guest data
+ * when Auto Action template variables are unresolved.
+ */
+export async function fetchSingleBeds24Booking(bookingId: string): Promise<any | null> {
+    try {
+        const property = await prisma.property.findFirst({
+            where: { beds24RefreshToken: { not: null } }
+        });
+        if (!property?.beds24RefreshToken) return null;
+
+        const accessToken = await getBeds24AccessToken(property.beds24RefreshToken);
+        const res = await fetch(`${BEDS24_API_URL}/bookings?id=${bookingId}`, {
+            headers: { 'token': accessToken }
+        });
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        const bookings = Array.isArray(data) ? data : (data.data || []);
+        return bookings.length > 0 ? bookings[0] : null;
+    } catch (err) {
+        console.warn('[Beds24] Failed to fetch single booking:', err);
+        return null;
+    }
+}
+
 export async function fetchBeds24Bookings(accessToken: string) {
     // Use arrival date range: 1 year back to 2 years ahead to capture all active/recent bookings
     const arrivalFrom = format(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
