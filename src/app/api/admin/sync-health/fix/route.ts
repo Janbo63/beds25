@@ -308,36 +308,58 @@ export async function POST(req: NextRequest) {
             }
 
             // Fetch all records to decide which to keep
-            const records: Array<{ id: string, hasRoom: boolean, name: string }> = [];
+            const records: Array<{ id: string, hasRoom: boolean, hasBeds25Link: boolean, name: string, createdTime: string }> = [];
             for (const zId of zohoIds) {
                 try {
                     const rec = await zohoClient.getRecord('Bookings', zId);
+                    // Check if this Zoho record is linked to a local Beds25 booking
+                    let hasBeds25Link = false;
+                    if (rec?.Beds25ID) {
+                        const localMatch = await prisma.booking.findFirst({ where: { id: rec.Beds25ID } });
+                        hasBeds25Link = !!localMatch;
+                    }
+                    // Also check if any local booking has this zohoId
+                    if (!hasBeds25Link) {
+                        const localByZoho = await prisma.booking.findFirst({ where: { zohoId: zId } });
+                        hasBeds25Link = !!localByZoho;
+                    }
                     records.push({
                         id: zId,
                         hasRoom: !!(rec?.Room?.id),
+                        hasBeds25Link,
                         name: rec?.Name || rec?.Guest_Name || 'Unknown',
+                        createdTime: rec?.Created_Time || '',
                     });
                 } catch (fetchErr: any) {
                     console.warn(`[SyncFix] Could not fetch Zoho ${zId}: ${fetchErr?.message}`);
-                    // Record may already be deleted
-                    records.push({ id: zId, hasRoom: false, name: 'FETCH_FAILED' });
+                    // Record may already be deleted — safe to remove
+                    records.push({ id: zId, hasRoom: false, hasBeds25Link: false, name: 'FETCH_FAILED', createdTime: '' });
                 }
             }
 
-            // Strategy: keep records WITH a room, delete those WITHOUT
-            const toKeep = records.filter(r => r.hasRoom);
-            const toDelete = records.filter(r => !r.hasRoom);
+            // Strategy (priority order):
+            // 1. Keep records linked to Beds25, delete unlinked ones
+            // 2. If all/none linked: keep records WITH rooms, delete WITHOUT
+            // 3. If still tied: keep the first (oldest), delete the rest
+            let toKeep = records.filter(r => r.hasBeds25Link);
+            let toDelete = records.filter(r => !r.hasBeds25Link);
 
             if (toKeep.length === 0) {
-                // All records are missing rooms — keep the first one, delete the rest
+                // No Beds25 links — fall back to room-based detection
+                toKeep = records.filter(r => r.hasRoom);
+                toDelete = records.filter(r => !r.hasRoom);
+            }
+
+            if (toKeep.length === 0) {
+                // Nothing has rooms either — keep the first, delete the rest
                 toKeep.push(toDelete.shift()!);
             }
 
             if (toDelete.length === 0) {
-                return NextResponse.json({ 
-                    success: true, 
-                    message: `All ${records.length} records have rooms — cannot auto-determine which is the duplicate. Please delete manually in Zoho.` 
-                });
+                // All records are linked or all have rooms — keep the first, delete the rest
+                console.log(`[SyncFix] All ${records.length} records appear valid. Keeping first (${records[0].id}), deleting rest.`);
+                toKeep = [records[0]];
+                toDelete = records.slice(1);
             }
 
             // Delete the duplicates
