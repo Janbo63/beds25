@@ -17,9 +17,9 @@ export async function GET() {
             include: { room: true },
             orderBy: { checkIn: 'asc' },
         });
-        const activeBookings = beds25Bookings.filter(b => b.status !== 'CANCELLED');
+        const activeBookings = beds25Bookings.filter((b: any) => b.status !== 'CANCELLED');
 
-        const issues: Array<{ beds25Id: string, guest: string, dates: string, room: string, issue: string, detail?: string }> = [];
+        const issues: Array<{ beds25Id: string, guest: string, dates: string, room: string, issue: string, detail?: string, zohoId?: string, externalId?: string }> = [];
 
         // 2. Fetch Beds24 Live
         const beds24Map: Map<string, any> = new Map();
@@ -74,7 +74,9 @@ export async function GET() {
                     dates: `${zb.Check_In} → ${zb.Check_Out}`,
                     room: 'NONE',
                     issue: 'zoho_missing_room',
-                    detail: `Zoho booking ${zId} has NO valid room reference! Likely caused by Beds24 import bug mapping a temporary CUID.`
+                    detail: `Zoho booking ${zId} has NO valid room reference! Likely caused by Beds24 import bug mapping a temporary CUID.`,
+                    zohoId: zId,
+                    externalId: zb.Beds24ID || undefined,
                 });
             }
         }
@@ -89,7 +91,9 @@ export async function GET() {
                     dates: 'N/A',
                     room: 'N/A',
                     issue: 'zoho_duplicate_booking',
-                    detail: `Zoho has ${group.length} records for Beds24 ID ${b24Id}: ${group.map(g => g.id).join(', ')}`
+                    detail: `Zoho has ${group.length} records for Beds24 ID ${b24Id}: ${group.map(g => g.id).join(', ')}`,
+                    externalId: b24Id,
+                    zohoId: group.map(g => g.id).join(','),
                 });
             }
         }
@@ -139,19 +143,19 @@ export async function GET() {
 
         // 6. Check for Zoho Orphans (Exists in Zoho, not in Beds25)
         for (const [zId, zb] of zohoMap) {
-            const localBooking = beds25Bookings.find(b => b.zohoId === zId || (zb.Beds25ID && b.id === zb.Beds25ID) || (zb.Beds24ID && b.externalId === zb.Beds24ID));
+            const localBooking = beds25Bookings.find((b: any) => b.zohoId === zId || (zb.Beds25ID && b.id === zb.Beds25ID) || (zb.Beds24ID && b.externalId === zb.Beds24ID));
             if (!localBooking && zb.Booking_status !== 'Cancelled') {
-                issues.push({ beds25Id: zb.Beds25ID || 'ORPHAN', guest: zb.Beds24ID || 'Manual Entry', dates: `${zb.Check_In} → ${zb.Check_Out}`, room: zb.Room?.name || 'Unknown', issue: 'zoho_orphan', detail: `Booking ${zId} exists in Zoho but is completely missing or unmatched in Beds25!` });
+                issues.push({ beds25Id: zb.Beds25ID || 'ORPHAN', guest: zb.Beds24ID || 'Manual Entry', dates: `${zb.Check_In} → ${zb.Check_Out}`, room: zb.Room?.name || 'Unknown', issue: 'zoho_orphan', detail: `Booking ${zId} exists in Zoho but is completely missing or unmatched in Beds25!`, zohoId: zId, externalId: zb.Beds24ID || undefined });
             }
         }
 
         // 7. Check for Beds24 Orphans (Exists in Beds24, not in Beds25)
         for (const [b24Id, b24] of beds24Map) {
-            const localBooking = beds25Bookings.find(b => b.externalId === b24Id);
+            const localBooking = beds25Bookings.find((b: any) => b.externalId === b24Id);
             const b24Status = beds24ToBeds25(b24.status as string | number);
             if (!localBooking && b24Status !== 'CANCELLED') {
                 const guestName = `${b24.firstName || ''} ${b24.lastName || ''}`.trim() || 'Unknown';
-                issues.push({ beds25Id: 'MISSING_IN_DB', guest: guestName, dates: `${b24.firstNight || b24.arrival}`, room: `Beds24 Room: ${b24.roomId}`, issue: 'missing_locally', detail: `CRITICAL: Beds24 booking ${b24Id} exists remotely but is missing from Beds25!` });
+                issues.push({ beds25Id: 'MISSING_IN_DB', guest: guestName, dates: `${b24.firstNight || b24.arrival}`, room: `Beds24 Room: ${b24.roomId}`, issue: 'missing_locally', detail: `CRITICAL: Beds24 booking ${b24Id} exists remotely but is missing from Beds25!`, externalId: b24Id });
             }
         }
 
