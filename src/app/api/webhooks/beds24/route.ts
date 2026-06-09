@@ -232,6 +232,11 @@ export async function POST(request: NextRequest) {
         const cleanReferer = isUnresolved(referer) ? 'BEDS24' : (referer || '');
         const cleanApiSource = isUnresolved(apiSource) ? '' : (apiSource || '');
 
+        // Sources that should NOT be overwritten by Beds24 echo-backs
+        const PRESERVED_SOURCES = ['Website', 'alpaca-site', 'WEBSITE', 'Direct', 'DIRECT'];
+        const isOwnEchoBack = cleanApiSource === 'BEDS25_DIRECT';
+        const existingSourcePreserved = existingBooking && PRESERVED_SOURCES.includes(existingBooking.source || '');
+
         // Fallback: if last name is missing (unresolved template), fetch from Beds24 API
         if (!lastName && bookId) {
             console.log(`[Webhook] Last name missing for booking ${bookId}, fetching from Beds24 API...`);
@@ -260,7 +265,7 @@ export async function POST(request: NextRequest) {
             checkIn,
             checkOut,
             status: mappedStatus,
-            source: cleanReferer || cleanApiSource || 'BEDS24',
+            source: isOwnEchoBack ? 'Website' : (cleanReferer || cleanApiSource || 'BEDS24'),
             totalPrice: parsePrice(price),
             numAdults: parseInt(numAdult || '1') || 1,
             numChildren: parseInt(numChild || '0') || 0,
@@ -283,7 +288,8 @@ export async function POST(request: NextRequest) {
                     checkIn,
                     checkOut,
                     status: mappedStatus,
-                    source: cleanReferer || cleanApiSource || 'BEDS24',
+                    // Preserve original source for website/direct bookings echoing back from Beds24
+                    ...(existingSourcePreserved ? {} : { source: cleanReferer || cleanApiSource || 'BEDS24' }),
                     totalPrice: parsePrice(price),
                     numAdults: parseInt(numAdult || '1') || 1,
                     numChildren: parseInt(numChild || '0') || 0,

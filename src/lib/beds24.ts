@@ -296,6 +296,12 @@ export async function importBeds24Data(inviteCode: string, existingRefreshToken?
                 guestId = guest.id;
             }
 
+            // Preserve original source for website/direct bookings during import
+            const PRESERVED_SOURCES = ['Website', 'alpaca-site', 'WEBSITE', 'Direct', 'DIRECT'];
+            const existingRecord = await prisma.booking.findUnique({ where: { externalId: b.id?.toString() } });
+            const preserveSource = existingRecord && PRESERVED_SOURCES.includes(existingRecord.source || '');
+            const newSource = b.apiSource === 'BEDS25_DIRECT' ? (existingRecord?.source || 'Website') : (b.apiSource || 'BEDS24');
+
             const localBooking = await prisma.booking.upsert({
                 where: { externalId: b.id?.toString() },
                 update: {
@@ -305,7 +311,7 @@ export async function importBeds24Data(inviteCode: string, existingRefreshToken?
                     checkIn: new Date(b.arrival),
                     checkOut: new Date(b.departure),
                     status: mapStatus(b.status),
-                    source: b.apiSource || 'BEDS24',
+                    ...(preserveSource ? {} : { source: newSource }),
                     totalPrice: parseFloat(b.price || '0'),
                     roomId: localRoom.id
                 },
@@ -316,7 +322,7 @@ export async function importBeds24Data(inviteCode: string, existingRefreshToken?
                     checkIn: new Date(b.arrival),
                     checkOut: new Date(b.departure),
                     status: mapStatus(b.status),
-                    source: b.apiSource || 'BEDS24',
+                    source: newSource,
                     totalPrice: parseFloat(b.price || '0'),
                     externalId: b.id?.toString(),
                     roomId: localRoom.id

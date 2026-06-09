@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         guestName, guestEmail, guestPhone, adults, children = [],
         specialRequests, nipNumber, voucherCode, voucherAmount,
         depositAmount, balanceAmount, stripeDepositId, stripeCustomerId,
-        stripePaymentMethodId, source = 'alpaca-site',
+        stripePaymentMethodId, source = 'Website',
     } = body;
 
     // Validate required fields

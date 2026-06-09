@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
             totalPrice,
             notes: notes || null,
             status: depositAmount ? 'DEPOSIT_PAID' : 'CONFIRMED',
-            source: 'WEBSITE',
+            source: 'Website',
             voucherCode: voucherCode || null,
             discountAmount: discountAmount || null,
             paymentMethod: 'card',
