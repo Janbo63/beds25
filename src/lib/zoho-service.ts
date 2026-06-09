@@ -114,6 +114,12 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         // Cross-reference IDs for Beds24 ↔ Beds25 ↔ Zoho link
         Beds24ID: booking.externalId || null,
         Beds25ID: booking.id || null,
+        // Split-payment & Stripe fields
+        Deposit_Amount: booking.depositAmount || null,
+        Balance_Amount: booking.balanceAmount || null,
+        Stripe_Deposit_ID: booking.stripeDepositId || booking.stripePaymentIntentId || null,
+        Stripe_Payment_Method_ID: booking.stripePaymentMethodId || null,
+        Nip_Number: booking.nipNumber || null,
     };
 
     if (contactId) {
