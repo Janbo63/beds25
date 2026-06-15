@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
             data: {
                 bookingRef,
                 zohoBookingDealId,
+                zohoId: zohoBookingDealId, // Link to existing Zoho record so syncToZoho updates it
                 roomId,
                 guestId,
                 guestName,
