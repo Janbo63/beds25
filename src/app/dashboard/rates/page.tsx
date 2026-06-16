@@ -67,7 +67,7 @@ export default function RatesPage() {
             </header>
 
             <main className="space-y-8">
-                <section className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden shadow-2xl">
+                <section className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-x-auto shadow-2xl">
                     <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 backdrop-blur-sm">
                         <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">{t('pricingGrid')}</h2>
                     </div>
