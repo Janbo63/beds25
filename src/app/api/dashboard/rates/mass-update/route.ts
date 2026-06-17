@@ -26,6 +26,10 @@ export async function POST(request: NextRequest) {
         // daysOfWeek should be array of numbers [0, 6] for weekends
         const targetDays = allDays.filter(day => daysOfWeek.includes(getDay(day)));
 
+        console.log(`[MassUpdate] Range: ${format(start, 'yyyy-MM-dd')} to ${format(end, 'yyyy-MM-dd')} = ${allDays.length} days`);
+        console.log(`[MassUpdate] Selected days of week: ${JSON.stringify(daysOfWeek)}`);
+        console.log(`[MassUpdate] Matching days: ${targetDays.length} (${targetDays.map(d => `${format(d, 'yyyy-MM-dd')}=${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][getDay(d)]}`).join(', ')})`);
+
         if (targetDays.length === 0) {
             return NextResponse.json({ message: 'No dates matched the selected criteria', count: 0 });
         }
@@ -46,21 +50,19 @@ export async function POST(request: NextRequest) {
             },
             select: {
                 checkIn: true,
-                checkOut: true
+                checkOut: true,
+                guestName: true,
+                status: true,
             }
         });
 
+        console.log(`[MassUpdate] Found ${existingBookings.length} overlapping bookings:`, existingBookings.map(b => `${b.guestName} ${format(new Date(b.checkIn), 'MM-dd')}-${format(new Date(b.checkOut), 'MM-dd')} (${b.status})`));
+
         // 4. Identify valid days to update (not occupied by a booking)
         const validUpdates: Date[] = [];
+        const skippedDates: string[] = [];
 
         for (const day of targetDays) {
-            // A day is "booked" if a booking covers it.
-            // Booking covers day D if checkIn <= D < checkOut
-            // (Standard hotel logic: checkout day is usually free for new check-in, 
-            // but for pricing, we usually price the "night of".
-            // So if I book Jan 1 to Jan 2, I pay for Jan 1.
-            // So we skip update if day is >= checkIn AND day < checkOut.
-
             const isBooked = existingBookings.some(booking => {
                 const bStart = startOfDay(new Date(booking.checkIn));
                 const bEnd = startOfDay(new Date(booking.checkOut));
@@ -69,8 +71,12 @@ export async function POST(request: NextRequest) {
 
             if (!isBooked) {
                 validUpdates.push(day);
+            } else {
+                skippedDates.push(format(day, 'yyyy-MM-dd'));
             }
         }
+
+        console.log(`[MassUpdate] Valid updates: ${validUpdates.length}, Skipped (booked): ${skippedDates.length} - ${skippedDates.join(', ')}`);
 
         if (validUpdates.length === 0) {
             return NextResponse.json({
@@ -126,9 +132,11 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             message: beds24SyncStatus === 'success'
-                ? `Rates updated and synced to Beds24!${markup !== 1 ? ` (Booking.com markup: ×${markup} = ${Math.round(priceValue * markup)} PLN)` : ''}`
+                ? `Updated ${validUpdates.length} dates${skippedDates.length > 0 ? ` (${skippedDates.length} skipped — already booked)` : ''}. Synced to Beds24!${markup !== 1 ? ` (Booking.com: ×${markup} = ${Math.round(priceValue * markup)} PLN)` : ''}`
                 : `Rates saved locally but Beds24 sync failed: ${beds24SyncError}`,
             count: validUpdates.length,
+            skipped: skippedDates.length,
+            skippedDates,
             beds24Sync: beds24SyncStatus,
             beds24Error: beds24SyncError || undefined,
             updatedDates: validUpdates.map(d => format(d, 'yyyy-MM-dd'))
