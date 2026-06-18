@@ -45,8 +45,8 @@ export default function MassRateUpdateModal({ roomId, roomNumber, onClose, onSav
         setError(null);
         setSuccessMsg(null);
 
-        if (!price || parseFloat(price) <= 0) {
-            setError('Please enter a valid price.');
+        if (!price && price !== '0') {
+            setError('Please enter a price (use 0 to block dates).');
             return;
         }
         if (selectedDays.length === 0) {
