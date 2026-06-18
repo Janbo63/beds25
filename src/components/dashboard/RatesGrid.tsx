@@ -71,6 +71,31 @@ export default function RatesGrid() {
         }
     };
 
+    const handleBlock = async () => {
+        if (!editingCell) return;
+        setSaving(true);
+
+        try {
+            const res = await fetch(`/api/dashboard/rates?roomId=${editingCell.roomId}&date=${editingCell.date}`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                const updatedData = { ...data };
+                const roomIndex = updatedData.rooms.findIndex((r: any) => r.id === editingCell.roomId);
+                if (roomIndex !== -1) {
+                    delete updatedData.rooms[roomIndex].prices[editingCell.date];
+                    setData(updatedData);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to block date:', error);
+        } finally {
+            setSaving(false);
+            setEditingCell(null);
+        }
+    };
+
     return (
         <div>
             {/* Month Navigation */}
@@ -178,6 +203,14 @@ export default function RatesGrid() {
                                                                         disabled={saving}
                                                                     >
                                                                         {saving ? '...' : t('save')}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={handleBlock}
+                                                                        className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded hover:bg-red-500"
+                                                                        disabled={saving}
+                                                                        title="Remove price and block this date"
+                                                                    >
+                                                                        🚫
                                                                     </button>
                                                                     <button
                                                                         onClick={() => setEditingCell(null)}

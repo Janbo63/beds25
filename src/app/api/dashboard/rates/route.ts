@@ -102,3 +102,37 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to save rate' }, { status: 500 });
     }
 }
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const roomId = searchParams.get('roomId');
+        const date = searchParams.get('date');
+
+        if (!roomId || !date) {
+            return NextResponse.json({ error: 'roomId and date are required' }, { status: 400 });
+        }
+
+        const parsedDate = startOfDay(new Date(date));
+
+        // Delete the price rule from local DB
+        await prisma.priceRule.deleteMany({
+            where: {
+                roomId,
+                date: parsedDate,
+            },
+        });
+
+        // Push price=0 to Beds24 to block the date there too
+        try {
+            await updateBeds24Rates(roomId, format(parsedDate, 'yyyy-MM-dd'), 0);
+        } catch (syncError) {
+            console.error('Beds24 block sync warning:', syncError);
+        }
+
+        return NextResponse.json({ success: true, message: 'Date blocked' });
+    } catch (error) {
+        console.error('Delete Rate Error:', error);
+        return NextResponse.json({ error: 'Failed to block date' }, { status: 500 });
+    }
+}
