@@ -99,7 +99,7 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         Booking_Notes: booking.notes,
         Payment_Method: booking.paymentMethod,
         Payment_Timing: booking.paymentTiming,
-        Payment_Status: booking.paymentStatus,
+        Payment_status: booking.paymentStatus,
         Arrival_time: booking.arrivalTime,
         Bookingcom_order_ID: booking.bookingComOrderId,
         Bookingcom_Pincode: booking.bookingComPincode,
@@ -495,6 +495,35 @@ export const bookingService = {
                     }
                 } catch (searchErr) {
                     console.warn('[ZohoService] Search by Beds25ID failed:', searchErr);
+                }
+            }
+
+            // Option B3: Search Zoho by Check-in and Check-out (Failsafe dedup for website bookings)
+            if (!zohoRecordId && localBooking.checkIn && localBooking.checkOut) {
+                try {
+                    const formattedCheckIn = format(new Date(localBooking.checkIn), 'yyyy-MM-dd');
+                    const formattedCheckOut = format(new Date(localBooking.checkOut), 'yyyy-MM-dd');
+                    const query = `select id, Name, Guest, Room, Beds25ID from ${ZOHO_MODULES.BOOKINGS} where Check_In = '${formattedCheckIn}' and Check_Out = '${formattedCheckOut}'`;
+                    const searchResult = await zohoClient.searchRecords(query);
+                    
+                    if (searchResult.data && searchResult.data.length > 0) {
+                        // Find a match based on Room and Contact/Name
+                        const match = searchResult.data.find((b: any) => {
+                            const roomMatch = !roomZohoId || b.Room?.id === roomZohoId;
+                            const beds25Match = b.Beds25ID === localBooking.id;
+                            const contactMatch = contactId && b.Guest?.id === contactId;
+                            const nameMatch = b.Name && localBooking.guestName && b.Name.toLowerCase().includes(localBooking.guestName.toLowerCase());
+                            return roomMatch && (beds25Match || contactMatch || nameMatch);
+                        });
+
+                        if (match) {
+                            zohoRecordId = match.id!;
+                            await zohoClient.updateRecord(ZOHO_MODULES.BOOKINGS, zohoRecordId, zohoData);
+                            console.log(`[ZohoService] Found existing Zoho record by Dates & Room/Guest and updated it: ${zohoRecordId}`);
+                        }
+                    }
+                } catch (searchErr) {
+                    console.warn('[ZohoService] Search by Dates failed:', searchErr);
                 }
             }
 

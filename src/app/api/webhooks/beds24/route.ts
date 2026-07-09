@@ -235,7 +235,11 @@ export async function POST(request: NextRequest) {
         // Sources that should NOT be overwritten by Beds24 echo-backs
         const PRESERVED_SOURCES = ['Website', 'alpaca-site', 'WEBSITE', 'Direct', 'DIRECT'];
         const isOwnEchoBack = cleanApiSource === 'BEDS25_DIRECT';
-        const existingSourcePreserved = existingBooking && PRESERVED_SOURCES.includes(existingBooking.source || '');
+        const existingSourcePreserved = existingBooking && (
+            PRESERVED_SOURCES.includes(existingBooking.source || '') || 
+            !!existingBooking.stripeDepositId || 
+            !!existingBooking.zohoBookingDealId
+        );
 
         // Fallback: if last name is missing (unresolved template), fetch from Beds24 API
         if (!lastName && bookId) {
