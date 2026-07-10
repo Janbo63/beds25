@@ -67,7 +67,20 @@ export async function GET(request: NextRequest) {
                     status: b.status,
                     totalPrice: b.totalPrice,
                     externalId: b.externalId,
-                    isPrivate: b.isPrivate
+                    isPrivate: b.isPrivate,
+                    // Payment details
+                    depositAmount: b.depositAmount,
+                    balanceAmount: b.balanceAmount,
+                    stripeDepositId: b.stripeDepositId,
+                    stripeBalanceId: b.stripeBalanceId,
+                    stripeCustomerId: b.stripeCustomerId,
+                    paymentStatus: b.paymentStatus,
+                    paymentMethod: b.paymentMethod,
+                    nipNumber: b.nipNumber,
+                    depositPaidAt: b.depositPaidAt,
+                    balanceDueDate: b.balanceDueDate,
+                    zohoBookingDealId: b.zohoBookingDealId,
+                    bookingRef: b.bookingRef,
                 }))
             };
         });
