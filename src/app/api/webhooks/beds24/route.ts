@@ -220,9 +220,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: `Room ${roomId} not found` }, { status: 404 });
         }
 
-        // Check existing booking
+        // Check existing booking (search by Beds24 ID or Booking.com Channel Order ID)
         const existingBooking = await prisma.booking.findFirst({
-            where: { externalId: bookId.toString() }
+            where: {
+                OR: [
+                    { externalId: bookId.toString() },
+                    { bookingComOrderId: bookId.toString() }
+                ]
+            }
         });
 
         // Clean guest data (handle unresolved template variables)
@@ -292,6 +297,7 @@ export async function POST(request: NextRequest) {
                     checkIn,
                     checkOut,
                     status: mappedStatus,
+                    externalId: bookId.toString(),
                     // Preserve original source for website/direct bookings echoing back from Beds24
                     ...(existingSourcePreserved ? {} : { source: cleanReferer || cleanApiSource || 'BEDS24' }),
                     totalPrice: parsePrice(price),
