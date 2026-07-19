@@ -288,31 +288,60 @@ export async function POST(request: NextRequest) {
         if (existingBooking) {
             // Update directly via Prisma — bookingService.update() routes through Zoho CRM
             // which fails for webhook-created bookings that don't have Zoho IDs
+
+            // For website bookings: only update dates, room, status, externalId
+            // Do NOT overwrite guest counts, payment data, or notes — Beds24 sends
+            // wrong/default values (numAdult=1, numChild=0) that destroy website data.
+            const websiteSafeUpdate: Record<string, any> = {
+                roomId: room.id,
+                checkIn,
+                checkOut,
+                status: mappedStatus,
+                externalId: bookId.toString(),
+                // Preserve original source for website/direct bookings echoing back from Beds24
+                ...(existingSourcePreserved ? {} : { source: cleanReferer || cleanApiSource || 'BEDS24' }),
+            };
+
+            if (existingSourcePreserved) {
+                // Website/Direct booking — only update safe fields
+                // Preserve: numAdults, numChildren, guestAges, notes,
+                //           stripeDepositId, stripePaymentMethodId, depositAmount, balanceAmount,
+                //           paymentStatus, paymentMethod, totalPrice, guestName, guestEmail
+                console.log(`[Webhook] Website booking detected (${existingBooking.id}) — preserving financial & guest data`);
+
+                // Only update guest name/email if Beds24 has better data than what we have
+                if (guestName && guestName !== 'Guest' && !existingBooking.guestName) {
+                    websiteSafeUpdate.guestName = guestName;
+                }
+                if (cleanEmail && !existingBooking.guestEmail) {
+                    websiteSafeUpdate.guestEmail = cleanEmail;
+                }
+            } else {
+                // Non-website booking (Booking.com, Airbnb, etc.) — update everything
+                websiteSafeUpdate.guestName = guestName;
+                websiteSafeUpdate.guestEmail = cleanEmail;
+                websiteSafeUpdate.totalPrice = parsePrice(price);
+                websiteSafeUpdate.numAdults = parseInt(numAdult || '1') || 1;
+                websiteSafeUpdate.numChildren = parseInt(numChild || '0') || 0;
+                websiteSafeUpdate.notes = `Updated via Webhook from ${cleanReferer || 'Beds24'}`;
+            }
+
             await prisma.booking.update({
                 where: { id: existingBooking.id },
-                data: {
-                    roomId: room.id,
-                    guestName,
-                    guestEmail: cleanEmail,
-                    checkIn,
-                    checkOut,
-                    status: mappedStatus,
-                    externalId: bookId.toString(),
-                    // Preserve original source for website/direct bookings echoing back from Beds24
-                    ...(existingSourcePreserved ? {} : { source: cleanReferer || cleanApiSource || 'BEDS24' }),
-                    totalPrice: parsePrice(price),
-                    numAdults: parseInt(numAdult || '1') || 1,
-                    numChildren: parseInt(numChild || '0') || 0,
-                    notes: `Updated via Webhook from ${cleanReferer || 'Beds24'}`
-                }
+                data: websiteSafeUpdate,
             });
 
-            // Sync update to Zoho (non-blocking)
-            try {
-                const updatedBooking = await prisma.booking.findUnique({ where: { id: existingBooking.id } });
-                await bookingService.syncToZoho(updatedBooking, room);
-            } catch (zohoErr: any) {
-                console.warn('[Webhook] Zoho sync failed (non-fatal):', zohoErr?.message);
+            // Sync update to Zoho — but SKIP for website bookings to prevent
+            // mapBookingToZoho from writing null over Stripe/payment fields
+            if (!existingSourcePreserved) {
+                try {
+                    const updatedBooking = await prisma.booking.findUnique({ where: { id: existingBooking.id } });
+                    await bookingService.syncToZoho(updatedBooking, room);
+                } catch (zohoErr: any) {
+                    console.warn('[Webhook] Zoho sync failed (non-fatal):', zohoErr?.message);
+                }
+            } else {
+                console.log(`[Webhook] Skipping Zoho sync for website booking — data already correct in Zoho`);
             }
         } else {
             // bookingService.create() handles: Zoho create + Beds24 push + local DB

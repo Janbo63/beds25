@@ -84,7 +84,12 @@ async function findOrCreateContact(guestName: string, guestEmail: string): Promi
 }
 
 /**
- * Map Prisma booking to Zoho CRM format
+ * Map Prisma booking to Zoho CRM format.
+ *
+ * IMPORTANT: Fields that originate from the Zagroda website (Stripe, deposit,
+ * balance, payment status, guest ages, NIP) are only included when they have
+ * actual values. This prevents Beds24 echo-back syncs from writing null over
+ * data that Zoho already holds from the original website booking.
  */
 function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string): ZohoRecord {
     const record: ZohoRecord = {
@@ -95,11 +100,9 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         Total_Price: booking.totalPrice,
         Number_of_Adults: booking.numAdults,
         Number_of_Children: booking.numChildren,
-        Guest_Ages: booking.guestAges,
         Booking_Notes: booking.notes,
         Payment_Method: booking.paymentMethod,
         Payment_Timing: booking.paymentTiming,
-        Payment_status: booking.paymentStatus,
         Arrival_time: booking.arrivalTime,
         Bookingcom_order_ID: booking.bookingComOrderId,
         Bookingcom_Pincode: booking.bookingComPincode,
@@ -114,12 +117,17 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         // Cross-reference IDs for Beds24 ↔ Beds25 ↔ Zoho link
         Beds24ID: booking.externalId || null,
         Beds25ID: booking.id || null,
-        // Split-payment & Stripe fields
-        Deposit_Amount: booking.depositAmount || null,
-        Balance_Amount: booking.balanceAmount || null,
-        Stripe_Deposit_ID: booking.stripeDepositId || booking.stripePaymentIntentId || null,
-        Stripe_Payment_Method_ID: booking.stripePaymentMethodId || null,
-        Nip_Number: booking.nipNumber || null,
+        // --- Website-originated fields: ONLY include when present ---
+        // This prevents Beds24 echo-backs from wiping data with null
+        ...(booking.guestAges ? { Guest_Ages: booking.guestAges } : {}),
+        ...(booking.paymentStatus ? { Payment_status: booking.paymentStatus } : {}),
+        ...(booking.depositAmount ? { Deposit_Amount: booking.depositAmount } : {}),
+        ...(booking.balanceAmount ? { Balance_Amount: booking.balanceAmount } : {}),
+        ...(booking.stripeDepositId || booking.stripePaymentIntentId
+            ? { Stripe_Deposit_ID: booking.stripeDepositId || booking.stripePaymentIntentId }
+            : {}),
+        ...(booking.stripePaymentMethodId ? { Stripe_Payment_Method_ID: booking.stripePaymentMethodId } : {}),
+        ...(booking.nipNumber ? { Nip_Number: booking.nipNumber } : {}),
     };
 
     if (contactId) {
@@ -424,25 +432,19 @@ export const bookingService = {
 
         console.log(`[ZohoService] Syncing booking ${localBooking.id} to Zoho...`);
 
-        // 1. Find or create contact in Zoho (always, even without email)
+        // 1. Find or create contact in Zoho
+        // IMPORTANT: Only create/link a contact if we have an email to search by.
+        // Without email, we'd create a new blank contact which would overwrite
+        // the existing Guest link on the Zoho booking record.
         let contactId: string | undefined;
-        if (localBooking.guestName && localBooking.guestName !== 'Guest') {
+        if (localBooking.guestName && localBooking.guestName !== 'Guest' && localBooking.guestEmail) {
             try {
-                if (localBooking.guestEmail) {
-                    contactId = await findOrCreateContact(localBooking.guestName, localBooking.guestEmail);
-                } else {
-                    // Create contact with name only (no email)
-                    const [firstName, ...lastNameParts] = localBooking.guestName.split(' ');
-                    const lastName = lastNameParts.join(' ') || '.';
-                    const newContact = await zohoClient.createRecord('Contacts', {
-                        First_Name: firstName,
-                        Last_Name: lastName,
-                    });
-                    contactId = newContact.id;
-                }
+                contactId = await findOrCreateContact(localBooking.guestName, localBooking.guestEmail);
             } catch (err) {
                 console.warn('[ZohoService] Could not find/create contact, proceeding without:', err);
             }
+        } else if (!localBooking.guestEmail) {
+            console.log(`[ZohoService] Skipping contact creation — no email for "${localBooking.guestName}". Existing Zoho Guest link will be preserved.`);
         }
 
         // 2. Map booking to Zoho format
