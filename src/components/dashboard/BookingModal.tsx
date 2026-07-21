@@ -273,6 +273,9 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                     {/* Notes */}
                     <div>
                         <label className={`${labelClass} flex items-center gap-2`}>📝 {t('notes')}</label>
+                        <div style={{ border: '3px solid red', padding: '8px', marginBottom: '8px', backgroundColor: 'rgba(255,0,0,0.2)' }}>
+                            <p style={{ color: 'yellow', fontWeight: 'bold', fontSize: '14px' }}>DEBUG: Payment Status = [{booking.paymentStatus || 'NULL'}] | Booking Status = [{booking.status}]</p>
+                        </div>
                         {isEditing ? (
                             <textarea
                                 value={notes}
