@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { format } from 'date-fns';
-import {
-    sendBalanceChargedEmail,
-    sendChargeFailedAlert,
-    sendDailyChargeSummary,
-} from '@/lib/email-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,9 +14,13 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * Finds all DEPOSIT_PAID bookings where checkIn is exactly 3 days away
  * and attempts to charge the saved payment method for the balance.
  *
- * On success → emails guest "balance charged, booking fully paid"
- * On failure → emails admins (Jan + Dorota) with error details
- * After all   → sends daily summary to admins
+ * On success → updates Zoho status to "Fully Paid"
+ *              → Zoho Workflow Rule sends guest confirmation email
+ * On failure → updates Zoho status to "Payment Failed"
+ *              → Zoho Workflow Rule sends admin alert email
+ *
+ * All guest/admin emails are handled by Zoho CRM Workflow Rules
+ * for consistency with the existing booking confirmation flow.
  */
 export async function POST(request: NextRequest) {
     // Verify this is called by system cron or internal systems
@@ -55,10 +54,6 @@ export async function POST(request: NextRequest) {
         status: string;
         error?: string;
     }> = [];
-
-    // Track for daily summary email
-    const succeeded: Array<{ bookingRef: string; guestName: string; amount: string }> = [];
-    const failed: Array<{ bookingRef: string; guestName: string; amount: string; error: string }> = [];
 
     // Instantiate Stripe here (not at module level) to avoid build-time errors
     const { default: Stripe } = await import('stripe');
@@ -103,30 +98,16 @@ export async function POST(request: NextRequest) {
                 },
             });
 
-            // Update Zoho Deal status (fire-and-forget)
-            await updateZohoDealStatus(booking.zohoBookingDealId, 'Fully Paid').catch((err) =>
+            // Update Zoho Booking → "Fully Paid"
+            // This triggers Zoho Workflow Rule to send guest confirmation email
+            await updateZohoBookingStatus(booking.zohoBookingDealId, 'Fully Paid', {
+                Payment_status: 'Fully Paid',
+                Stripe_Balance_ID: paymentIntent.id,
+            }).catch((err) =>
                 console.error(`[Cron] Zoho update failed for ${bookingRef}:`, err)
             );
 
-            // Send guest notification email
-            const checkInStr = format(new Date(booking.checkIn), 'dd.MM.yyyy');
-            const checkOutStr = format(new Date(booking.checkOut), 'dd.MM.yyyy');
-            await sendBalanceChargedEmail({
-                guestEmail: booking.guestEmail ?? '',
-                guestName: booking.guestName ?? 'Guest',
-                bookingRef: bookingRef ?? '',
-                roomName: booking.room?.name ?? 'Room',
-                checkIn: checkInStr,
-                checkOut: checkOutStr,
-                balanceAmount: booking.balanceAmount ?? 0,
-                currency,
-                locale: 'pl', // Most bookings are Polish; locale not stored on booking
-            }).catch((emailErr) =>
-                console.error(`[Cron] Guest email failed for ${bookingRef}:`, emailErr)
-            );
-
             results.push({ bookingRef, status: 'FULLY_PAID' });
-            succeeded.push({ bookingRef: bookingRef ?? '', guestName: booking.guestName ?? '', amount: amountStr });
             console.log(`[Cron] ✅ Balance charged: ${bookingRef} — ${amountStr}`);
 
         } catch (err: unknown) {
@@ -139,36 +120,20 @@ export async function POST(request: NextRequest) {
                 data: { status: 'PAYMENT_FAILED', paymentStatus: 'failed' },
             });
 
-            await updateZohoDealStatus(booking.zohoBookingDealId, 'Payment Failed').catch(() => { });
-
-            // Send immediate admin alert for failures
-            await sendChargeFailedAlert({
-                bookingRef: bookingRef ?? '',
-                guestName: booking.guestName ?? 'Unknown',
-                guestEmail: booking.guestEmail ?? 'N/A',
-                roomName: booking.room?.name ?? 'Room',
-                checkIn: format(new Date(booking.checkIn), 'dd.MM.yyyy'),
-                balanceAmount: booking.balanceAmount ?? 0,
-                currency,
-                error: msg,
-            }).catch((emailErr) =>
-                console.error(`[Cron] Admin alert email failed:`, emailErr)
-            );
+            // Update Zoho Booking → "Payment Failed"
+            // This triggers Zoho Workflow Rule to send admin alert email
+            await updateZohoBookingStatus(booking.zohoBookingDealId, 'Payment Failed', {
+                Payment_status: 'Payment Failed',
+                Booking_Notes_Append: `Balance charge failed (${format(today, 'dd.MM.yyyy')}): ${msg.substring(0, 200)}`,
+            }).catch(() => { });
 
             results.push({ bookingRef, status: 'PAYMENT_FAILED', error: msg });
-            failed.push({ bookingRef: bookingRef ?? '', guestName: booking.guestName ?? '', amount: amountStr, error: msg });
         }
     }
 
-    // Send daily summary to admins (if any bookings were processed)
-    if (succeeded.length > 0 || failed.length > 0) {
-        await sendDailyChargeSummary({
-            date: format(today, 'dd.MM.yyyy'),
-            succeeded,
-            failed,
-        }).catch((emailErr) =>
-            console.error('[Cron] Daily summary email failed:', emailErr)
-        );
+    // Log to Stef Dashboard (fire-and-forget)
+    if (results.length > 0) {
+        logToStef(results).catch(() => { });
     }
 
     return NextResponse.json({
@@ -179,23 +144,31 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Update the Zoho CRM Booking status.
+ * Update the Zoho CRM Booking record status + optional extra fields.
  */
-async function updateZohoDealStatus(zohoBookingDealId: string | null, status: string): Promise<void> {
-    if (!zohoBookingDealId) return;
+async function updateZohoBookingStatus(
+    zohoBookingId: string | null,
+    status: string,
+    extraFields?: Record<string, any>
+): Promise<void> {
+    if (!zohoBookingId) return;
 
     const baseUrl = process.env.ZOHO_API_DOMAIN ?? 'https://www.zohoapis.eu';
     const accessToken = await getZohoAccessToken();
 
-    const res = await fetch(`${baseUrl}/crm/v2/Bookings/${zohoBookingDealId}`, {
+    const updateData: Record<string, any> = {
+        id: zohoBookingId,
+        Booking_status: status,
+        ...extraFields,
+    };
+
+    const res = await fetch(`${baseUrl}/crm/v2/Bookings/${zohoBookingId}`, {
         method: 'PUT',
         headers: {
             Authorization: `Zoho-oauthtoken ${accessToken}`,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            data: [{ id: zohoBookingDealId, Booking_status: status, Payment_status: status }],
-        }),
+        body: JSON.stringify({ data: [updateData] }),
     });
 
     if (!res.ok) {
@@ -218,4 +191,31 @@ async function getZohoAccessToken(): Promise<string> {
     const data = await res.json() as { access_token?: string };
     if (!data.access_token) throw new Error('Failed to get Zoho access token');
     return data.access_token;
+}
+
+/**
+ * Log balance charge results to Stef Dashboard (centralised monitoring)
+ */
+async function logToStef(results: Array<{ bookingRef: string | null; status: string; error?: string }>) {
+    const succeeded = results.filter(r => r.status === 'FULLY_PAID').length;
+    const failed = results.filter(r => r.status === 'PAYMENT_FAILED').length;
+    const level = failed > 0 ? 'error' : 'info';
+
+    try {
+        await fetch(process.env.STEF_LOG_URL || 'https://stef.futuresolutionsai.com/api/logs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': process.env.STEF_LOG_KEY || 'fs-log-key-2026',
+            },
+            body: JSON.stringify({
+                app: 'beds25',
+                level,
+                message: `Balance charge cron: ${succeeded} succeeded, ${failed} failed out of ${results.length}`,
+                metadata: { results },
+            }),
+        });
+    } catch {
+        console.error('[Cron] Stef log failed (non-fatal)');
+    }
 }
