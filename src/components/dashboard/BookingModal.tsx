@@ -290,7 +290,10 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                         )}
                     </div>
 
-                    {/* Payment Details */}
+                    {/* Payment Details - DEBUG TEST */}
+                    <div style={{ border: '3px solid red', padding: '16px', margin: '8px 0', borderRadius: '12px', backgroundColor: 'rgba(255,0,0,0.1)' }}>
+                        <p style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>PAYMENT STATUS TEST - Status: {booking.status} | PaymentStatus: {booking.paymentStatus || 'none'}</p>
+                    </div>
                     {booking.status !== 'BLOCKED' && (
                         <div className="bg-white/5 p-4 rounded-2xl space-y-4 border-2 border-red-500">
                             <div className="flex justify-between items-center">
