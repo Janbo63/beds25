@@ -94,13 +94,13 @@ export async function POST(request: NextRequest) {
                     status: 'FULLY_PAID',
                     balancePaidAt: new Date(),
                     stripeBalanceId: paymentIntent.id,
-                    paymentStatus: 'paid',
+                    paymentStatus: 'Fully Paid',
                 },
             });
 
-            // Update Zoho Booking → "Fully Paid"
+            // Update Zoho Booking → "Fully Confirmed" and "Fully Paid"
             // This triggers Zoho Workflow Rule to send guest confirmation email
-            await updateZohoBookingStatus(booking.zohoBookingDealId, 'Fully Paid', {
+            await updateZohoBookingStatus(booking.zohoBookingDealId, 'Fully Confirmed', {
                 Payment_status: 'Fully Paid',
                 Stripe_Balance_ID: paymentIntent.id,
             }).catch((err) =>
@@ -117,14 +117,14 @@ export async function POST(request: NextRequest) {
             // Mark as PAYMENT_FAILED
             await prisma.booking.update({
                 where: { id: booking.id },
-                data: { status: 'PAYMENT_FAILED', paymentStatus: 'failed' },
+                data: { status: 'PAYMENT_FAILED', paymentStatus: 'Failed' },
             });
 
             // Update Zoho Booking → "Payment Failed"
             // This triggers Zoho Workflow Rule to send admin alert email
             await updateZohoBookingStatus(booking.zohoBookingDealId, 'Payment Failed', {
-                Payment_status: 'Payment Failed',
-                Booking_Notes_Append: `Balance charge failed (${format(today, 'dd.MM.yyyy')}): ${msg.substring(0, 200)}`,
+                Payment_status: 'Failed',
+                Booking_Notes: (booking.notes ? booking.notes + '\n\n' : '') + `Balance charge failed (${format(today, 'dd.MM.yyyy')}): ${msg.substring(0, 200)}`,
             }).catch(() => { });
 
             results.push({ bookingRef, status: 'PAYMENT_FAILED', error: msg });

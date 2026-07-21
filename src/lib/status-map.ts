@@ -47,7 +47,7 @@ export function beds25ToZoho(status: string | undefined | null): string {
         'CONFIRMED':       'Confirmed',
         'DEPOSIT_PAID':    'Deposit Paid',
         'BALANCE_PENDING': 'Balance Pending',
-        'FULLY_PAID':      'Fully Paid',
+        'FULLY_PAID':      'Fully Confirmed',
         'PAYMENT_FAILED':  'Payment Failed',
         'CANCELLED':       'Cancelled',
     };
@@ -63,6 +63,7 @@ export function zohoToBeds25(zohoStatus: string | undefined | null): Beds25Statu
         'confirmed':       'CONFIRMED',
         'deposit paid':    'DEPOSIT_PAID',
         'balance pending': 'BALANCE_PENDING',
+        'fully confirmed': 'FULLY_PAID',
         'fully paid':      'FULLY_PAID',
         'payment failed':  'PAYMENT_FAILED',
         'cancelled':       'CANCELLED',
