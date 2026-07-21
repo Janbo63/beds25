@@ -318,8 +318,8 @@ export async function POST(request: NextRequest) {
                 }
             } else {
                 // Non-website booking (Booking.com, Airbnb, etc.) — update everything
-                websiteSafeUpdate.guestName = guestName;
-                websiteSafeUpdate.guestEmail = cleanEmail;
+                websiteSafeUpdate.guestName = (guestName && guestName !== 'Guest') ? guestName : (existingBooking.guestName || 'Guest');
+                websiteSafeUpdate.guestEmail = cleanEmail || existingBooking.guestEmail || null;
                 websiteSafeUpdate.totalPrice = parsePrice(price);
                 websiteSafeUpdate.numAdults = parseInt(numAdult || '1') || 1;
                 websiteSafeUpdate.numChildren = parseInt(numChild || '0') || 0;

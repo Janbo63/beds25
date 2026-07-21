@@ -305,9 +305,9 @@ export async function importBeds24Data(inviteCode: string, existingRefreshToken?
             const localBooking = await prisma.booking.upsert({
                 where: { externalId: b.id?.toString() },
                 update: {
-                    guestName: guestName,
-                    guestEmail: guestEmail,
-                    guestId: guestId,
+                    guestName: (guestName && guestName !== 'Guest') ? guestName : (existingRecord?.guestName || 'Guest'),
+                    guestEmail: guestEmail || existingRecord?.guestEmail || null,
+                    guestId: guestId || existingRecord?.guestId || null,
                     checkIn: new Date(b.arrival),
                     checkOut: new Date(b.departure),
                     status: mapStatus(b.status),

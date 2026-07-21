@@ -17,6 +17,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
 
     // Editable fields
     const [status, setStatus] = useState(booking?.status || 'CONFIRMED');
+    const [paymentStatus, setPaymentStatus] = useState(booking?.paymentStatus || 'pending');
     const [isPrivate, setIsPrivate] = useState(booking?.isPrivate || false);
     const [guestName, setGuestName] = useState(booking?.guestName || '');
     const [guestEmail, setGuestEmail] = useState(booking?.guestEmail || '');
@@ -39,7 +40,8 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
             totalPrice !== booking.totalPrice ||
             numAdults !== booking.numAdults ||
             numChildren !== booking.numChildren ||
-            notes !== (booking.notes || '');
+            notes !== (booking.notes || '') ||
+            paymentStatus !== (booking.paymentStatus || 'pending');
     };
 
     const handleSave = async () => {
@@ -59,6 +61,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
             if (numAdults !== booking.numAdults) updates.numAdults = numAdults;
             if (numChildren !== booking.numChildren) updates.numChildren = numChildren;
             if (notes !== (booking.notes || '')) updates.notes = notes;
+            if (paymentStatus !== (booking.paymentStatus || 'pending')) updates.paymentStatus = paymentStatus;
 
             const res = await fetch('/api/bookings', {
                 method: 'PATCH',
@@ -288,18 +291,32 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                     </div>
 
                     {/* Payment Details */}
-                    {(booking.depositAmount || booking.balanceAmount || booking.paymentStatus) && (
+                    {(booking.depositAmount || booking.balanceAmount || booking.paymentStatus || isEditing) && (
                         <div className="bg-white/5 p-4 rounded-2xl space-y-4">
                             <div className="flex justify-between items-center">
                                 <h5 className="text-sm font-bold text-neutral-200 uppercase tracking-wider">Payment Details</h5>
-                                <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-black uppercase ${
-                                    booking.paymentStatus === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
-                                    booking.paymentStatus === 'partial' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' :
-                                    booking.paymentStatus === 'failed' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30' :
-                                    'bg-neutral-800 text-neutral-400 border border-neutral-700'
-                                }`}>
-                                    {booking.paymentStatus || 'pending'}
-                                </span>
+                                {isEditing ? (
+                                    <select
+                                        value={paymentStatus}
+                                        onChange={(e) => setPaymentStatus(e.target.value)}
+                                        className="bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-white/10 rounded-lg px-2 py-1.5 text-neutral-900 dark:text-white text-xs font-bold uppercase focus:outline-none"
+                                    >
+                                        <option value="pending" className="bg-white dark:bg-neutral-900 text-neutral-400">Pending</option>
+                                        <option value="partial" className="bg-white dark:bg-neutral-900 text-amber-400">Partial</option>
+                                        <option value="paid" className="bg-white dark:bg-neutral-900 text-emerald-400">Paid</option>
+                                        <option value="failed" className="bg-white dark:bg-neutral-900 text-rose-400">Failed</option>
+                                        <option value="refunded" className="bg-white dark:bg-neutral-900 text-purple-400">Refunded</option>
+                                    </select>
+                                ) : (
+                                    <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-black uppercase ${
+                                        paymentStatus === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
+                                        paymentStatus === 'partial' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' :
+                                        paymentStatus === 'failed' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30' :
+                                        'bg-neutral-800 text-neutral-400 border border-neutral-700'
+                                    }`}>
+                                        {paymentStatus || 'pending'}
+                                    </span>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 text-sm border-t border-white/5 pt-3">
@@ -389,6 +406,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                                         setIsEditing(false);
                                         // Reset to original values
                                         setStatus(booking.status);
+                                        setPaymentStatus(booking.paymentStatus || 'pending');
                                         setGuestName(booking.guestName);
                                         setGuestEmail(booking.guestEmail || '');
                                         setCheckIn(booking.checkIn?.slice(0, 10));
