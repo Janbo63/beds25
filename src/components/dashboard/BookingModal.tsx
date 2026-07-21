@@ -291,7 +291,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                     </div>
 
                     {/* Payment Details */}
-                    {(booking.depositAmount || booking.balanceAmount || booking.paymentStatus || isEditing) && (
+                    {booking.status !== 'BLOCKED' && (
                         <div className="bg-white/5 p-4 rounded-2xl space-y-4">
                             <div className="flex justify-between items-center">
                                 <h5 className="text-sm font-bold text-neutral-200 uppercase tracking-wider">Payment Details</h5>
@@ -319,40 +319,42 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 text-sm border-t border-white/5 pt-3">
-                                {booking.depositAmount ? (
-                                    <div>
-                                        <label className={labelClass}>10% Deposit</label>
-                                        <p className="text-white font-bold">{booking.depositAmount.toFixed(2)} zł</p>
-                                        {booking.depositPaidAt && (
-                                            <p className="text-[10px] text-neutral-400">Paid: {format(new Date(booking.depositPaidAt), 'd MMM yyyy')}</p>
-                                        )}
-                                        {booking.stripeDepositId && (
-                                            <p className="text-[10px] text-neutral-500 font-mono mt-1 break-all select-all">Stripe: {booking.stripeDepositId}</p>
-                                        )}
-                                    </div>
-                                ) : null}
+                            {(booking.depositAmount || booking.balanceAmount) ? (
+                                <div className="grid grid-cols-2 gap-4 text-sm border-t border-white/5 pt-3">
+                                    {booking.depositAmount ? (
+                                        <div>
+                                            <label className={labelClass}>10% Deposit</label>
+                                            <p className="text-white font-bold">{booking.depositAmount.toFixed(2)} zł</p>
+                                            {booking.depositPaidAt && (
+                                                <p className="text-[10px] text-neutral-400">Paid: {format(new Date(booking.depositPaidAt), 'd MMM yyyy')}</p>
+                                            )}
+                                            {booking.stripeDepositId && (
+                                                <p className="text-[10px] text-neutral-500 font-mono mt-1 break-all select-all">Stripe: {booking.stripeDepositId}</p>
+                                            )}
+                                        </div>
+                                    ) : null}
 
-                                {booking.balanceAmount ? (
-                                    <div>
-                                        <label className={labelClass}>90% Balance</label>
-                                        <p className="text-white font-bold">{booking.balanceAmount.toFixed(2)} zł</p>
-                                        {booking.balanceDueDate && (() => {
-                                            const dueDate = new Date(booking.balanceDueDate);
-                                            const isUnpaid = booking.paymentStatus !== 'paid';
-                                            const isPastDue = isUnpaid && dueDate < new Date();
-                                            return (
-                                                <p className={`text-[10px] font-medium ${isPastDue ? 'text-rose-400 font-bold' : 'text-neutral-400'}`}>
-                                                    Due: {format(dueDate, 'd MMM yyyy')} {isPastDue ? '(Past Due)' : ''}
-                                                </p>
-                                            );
-                                        })()}
-                                        {booking.stripeBalanceId && (
-                                            <p className="text-[10px] text-neutral-500 font-mono mt-1 break-all select-all">Stripe: {booking.stripeBalanceId}</p>
-                                        )}
-                                    </div>
-                                ) : null}
-                            </div>
+                                    {booking.balanceAmount ? (
+                                        <div>
+                                            <label className={labelClass}>90% Balance</label>
+                                            <p className="text-white font-bold">{booking.balanceAmount.toFixed(2)} zł</p>
+                                            {booking.balanceDueDate && (() => {
+                                                const dueDate = new Date(booking.balanceDueDate);
+                                                const isUnpaid = booking.paymentStatus !== 'paid';
+                                                const isPastDue = isUnpaid && dueDate < new Date();
+                                                return (
+                                                    <p className={`text-[10px] font-medium ${isPastDue ? 'text-rose-400 font-bold' : 'text-neutral-400'}`}>
+                                                        Due: {format(dueDate, 'd MMM yyyy')} {isPastDue ? '(Past Due)' : ''}
+                                                    </p>
+                                                );
+                                            })()}
+                                            {booking.stripeBalanceId && (
+                                                <p className="text-[10px] text-neutral-500 font-mono mt-1 break-all select-all">Stripe: {booking.stripeBalanceId}</p>
+                                            )}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ) : null}
 
                             {(booking.paymentMethod || booking.nipNumber) && (
                                 <div className="text-xs text-neutral-400 border-t border-white/5 pt-2 flex justify-between">
