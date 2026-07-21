@@ -292,7 +292,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
 
                     {/* Payment Details */}
                     {booking.status !== 'BLOCKED' && (
-                        <div className="bg-white/5 p-4 rounded-2xl space-y-4">
+                        <div className="bg-white/5 p-4 rounded-2xl space-y-4 border-2 border-red-500">
                             <div className="flex justify-between items-center">
                                 <h5 className="text-sm font-bold text-neutral-200 uppercase tracking-wider">Payment Details</h5>
                                 {isEditing ? (
