@@ -62,5 +62,17 @@ jobs:
             # Save PM2 process list
             pm2 save
 
+            # Set up daily balance charge cron (08:00 UTC = 10:00 CEST)
+            # Sources the CRON_SECRET from the app's .env file
+            echo "⏰ Setting up balance charge cron..."
+            CRON_SECRET=$(grep '^CRON_SECRET=' /var/www/beds25/.env | cut -d '=' -f2- | tr -d '"' | tr -d "'")
+            if [ -n "$CRON_SECRET" ]; then
+              CRON_CMD="0 8 * * * curl -s -X POST -H 'x-cron-secret: ${CRON_SECRET}' http://localhost:3003/api/cron/charge-balances >> /var/log/beds25-cron.log 2>&1"
+              (crontab -l 2>/dev/null | grep -v 'charge-balances'; echo "$CRON_CMD") | crontab -
+              echo "✅ Balance charge cron installed (daily 08:00 UTC)"
+            else
+              echo "⚠️  CRON_SECRET not found in .env — skipping cron setup"
+            fi
+
             echo "✅ Deployment complete!"
             echo "🌐 Application running on port 3003"

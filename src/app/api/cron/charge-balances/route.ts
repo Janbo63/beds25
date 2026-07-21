@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { format } from 'date-fns';
+import {
+    sendBalanceChargedEmail,
+    sendChargeFailedAlert,
+    sendDailyChargeSummary,
+} from '@/lib/email-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,15 +15,16 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * T-3 Balance Charge Cron
  * POST /api/cron/charge-balances
  *
- * Runs daily at 08:00 UTC via Vercel cron.
+ * Runs daily at 08:00 UTC via system cron on the VPS.
  * Finds all DEPOSIT_PAID bookings where checkIn is exactly 3 days away
  * and attempts to charge the saved payment method for the balance.
  *
- * Beds25 does NOT send emails — Zoho Deal status updates trigger Zoho workflows
- * which handle all guest communication.
+ * On success → emails guest "balance charged, booking fully paid"
+ * On failure → emails admins (Jan + Dorota) with error details
+ * After all   → sends daily summary to admins
  */
 export async function POST(request: NextRequest) {
-    // Verify this is called by Vercel cron or internal systems
+    // Verify this is called by system cron or internal systems
     const secret = request.headers.get('x-cron-secret') ?? request.headers.get('authorization')?.replace('Bearer ', '');
     if (!CRON_SECRET || secret !== CRON_SECRET) {
         return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
@@ -49,12 +56,18 @@ export async function POST(request: NextRequest) {
         error?: string;
     }> = [];
 
+    // Track for daily summary email
+    const succeeded: Array<{ bookingRef: string; guestName: string; amount: string }> = [];
+    const failed: Array<{ bookingRef: string; guestName: string; amount: string; error: string }> = [];
+
     // Instantiate Stripe here (not at module level) to avoid build-time errors
     const { default: Stripe } = await import('stripe');
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', { apiVersion: '2025-01-27.acacia' });
 
     for (const booking of bookings) {
         const bookingRef = booking.bookingRef ?? booking.id;
+        const currency = booking.currency ?? 'PLN';
+        const amountStr = `${(booking.balanceAmount ?? 0).toFixed(2)} ${currency}`;
 
         try {
             // Move to BALANCE_PENDING to prevent duplicate charges on re-run
@@ -66,7 +79,7 @@ export async function POST(request: NextRequest) {
             // Attempt off-session charge
             const paymentIntent = await stripe.paymentIntents.create({
                 amount: Math.round((booking.balanceAmount ?? 0) * 100), // pence/grosz
-                currency: (booking.currency ?? 'pln').toLowerCase(),
+                currency: currency.toLowerCase(),
                 customer: booking.stripeCustomerId!,
                 payment_method: booking.stripePaymentMethodId!,
                 off_session: true,
@@ -75,6 +88,7 @@ export async function POST(request: NextRequest) {
                 metadata: {
                     bookingRef: bookingRef ?? '',
                     zohoBookingDealId: booking.zohoBookingDealId ?? '',
+                    type: 'booking_balance',
                 },
             });
 
@@ -94,8 +108,26 @@ export async function POST(request: NextRequest) {
                 console.error(`[Cron] Zoho update failed for ${bookingRef}:`, err)
             );
 
+            // Send guest notification email
+            const checkInStr = format(new Date(booking.checkIn), 'dd.MM.yyyy');
+            const checkOutStr = format(new Date(booking.checkOut), 'dd.MM.yyyy');
+            await sendBalanceChargedEmail({
+                guestEmail: booking.guestEmail ?? '',
+                guestName: booking.guestName ?? 'Guest',
+                bookingRef: bookingRef ?? '',
+                roomName: booking.room?.name ?? 'Room',
+                checkIn: checkInStr,
+                checkOut: checkOutStr,
+                balanceAmount: booking.balanceAmount ?? 0,
+                currency,
+                locale: 'pl', // Most bookings are Polish; locale not stored on booking
+            }).catch((emailErr) =>
+                console.error(`[Cron] Guest email failed for ${bookingRef}:`, emailErr)
+            );
+
             results.push({ bookingRef, status: 'FULLY_PAID' });
-            console.log(`[Cron] ✅ Balance charged: ${bookingRef} — ${booking.balanceAmount} ${booking.currency}`);
+            succeeded.push({ bookingRef: bookingRef ?? '', guestName: booking.guestName ?? '', amount: amountStr });
+            console.log(`[Cron] ✅ Balance charged: ${bookingRef} — ${amountStr}`);
 
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Unknown Stripe error';
@@ -109,8 +141,34 @@ export async function POST(request: NextRequest) {
 
             await updateZohoDealStatus(booking.zohoBookingDealId, 'Payment Failed').catch(() => { });
 
+            // Send immediate admin alert for failures
+            await sendChargeFailedAlert({
+                bookingRef: bookingRef ?? '',
+                guestName: booking.guestName ?? 'Unknown',
+                guestEmail: booking.guestEmail ?? 'N/A',
+                roomName: booking.room?.name ?? 'Room',
+                checkIn: format(new Date(booking.checkIn), 'dd.MM.yyyy'),
+                balanceAmount: booking.balanceAmount ?? 0,
+                currency,
+                error: msg,
+            }).catch((emailErr) =>
+                console.error(`[Cron] Admin alert email failed:`, emailErr)
+            );
+
             results.push({ bookingRef, status: 'PAYMENT_FAILED', error: msg });
+            failed.push({ bookingRef: bookingRef ?? '', guestName: booking.guestName ?? '', amount: amountStr, error: msg });
         }
+    }
+
+    // Send daily summary to admins (if any bookings were processed)
+    if (succeeded.length > 0 || failed.length > 0) {
+        await sendDailyChargeSummary({
+            date: format(today, 'dd.MM.yyyy'),
+            succeeded,
+            failed,
+        }).catch((emailErr) =>
+            console.error('[Cron] Daily summary email failed:', emailErr)
+        );
     }
 
     return NextResponse.json({
@@ -121,8 +179,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Update the Zoho CRM Deal status for the given deal ID.
- * Zoho workflows on that status change handle all guest communication.
+ * Update the Zoho CRM Booking status.
  */
 async function updateZohoDealStatus(zohoBookingDealId: string | null, status: string): Promise<void> {
     if (!zohoBookingDealId) return;
@@ -130,14 +187,14 @@ async function updateZohoDealStatus(zohoBookingDealId: string | null, status: st
     const baseUrl = process.env.ZOHO_API_DOMAIN ?? 'https://www.zohoapis.eu';
     const accessToken = await getZohoAccessToken();
 
-    const res = await fetch(`${baseUrl}/crm/v2/Deals/${zohoBookingDealId}`, {
+    const res = await fetch(`${baseUrl}/crm/v2/Bookings/${zohoBookingDealId}`, {
         method: 'PUT',
         headers: {
             Authorization: `Zoho-oauthtoken ${accessToken}`,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            data: [{ id: zohoBookingDealId, Stage: status }],
+            data: [{ id: zohoBookingDealId, Booking_status: status, Payment_status: status }],
         }),
     });
 
