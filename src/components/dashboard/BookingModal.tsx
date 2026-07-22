@@ -225,71 +225,6 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                         </div>
                     </div>
 
-                    {/* Party Size */}
-                    <div className="bg-white/5 p-4 rounded-2xl space-y-3">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className={labelClass}>👨 {t('adults')}</label>
-                                {isEditing ? (
-                                    <input type="number" min={1} max={10} value={numAdults} onChange={e => setNumAdults(parseInt(e.target.value) || 1)} className={inputClass} />
-                                ) : (
-                                    <p className={`${displayClass} text-sm`}>{booking.numAdults || 0} {t('adults')}</p>
-                                )}
-                            </div>
-                            <div>
-                                <label className={labelClass}>👶 {t('children')}</label>
-                                {isEditing ? (
-                                    <input type="number" min={0} max={10} value={numChildren} onChange={e => setNumChildren(parseInt(e.target.value) || 0)} className={inputClass} />
-                                ) : (
-                                    <p className="text-sm text-neutral-400">{booking.numChildren || 0} {t('children')}</p>
-                                )}
-                            </div>
-                        </div>
-
-                        {!isEditing && booking.guestAges && (() => {
-                            try {
-                                const ages = JSON.parse(booking.guestAges);
-                                if (ages && ages.length > 0) {
-                                    return (
-                                        <div>
-                                            <label className={`${labelClass} mb-2`}>{t('guestAges')}</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {ages.map((age: number, idx: number) => (
-                                                    <div key={idx} className="px-3 py-1 bg-neutral-800 rounded-lg text-xs font-bold text-neutral-300">
-                                                        {age} {t('years')}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    );
-                                }
-                            } catch {
-                                return null;
-                            }
-                            return null;
-                        })()}
-                    </div>
-
-                    {/* Notes */}
-                    <div>
-                        <label className={`${labelClass} flex items-center gap-2`}>📝 {t('notes')}</label>
-                        {isEditing ? (
-                            <textarea
-                                value={notes}
-                                onChange={e => setNotes(e.target.value)}
-                                rows={3}
-                                className={`${inputClass} resize-none`}
-                                placeholder={t('notesPlaceholder')}
-                            />
-                        ) : booking.notes ? (
-                            <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl">
-                                <p className="text-sm text-white leading-relaxed">{booking.notes}</p>
-                            </div>
-                        ) : (
-                            <p className="text-sm text-neutral-600 italic">{t('noNotes')}</p>
-                        )}
-                    </div>
-
                     {/* Payment Details */}
                     {status !== 'BLOCKED' && (
                         <div className="bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 p-4 rounded-2xl space-y-4">
@@ -380,6 +315,70 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                             )}
                         </div>
                     )}
+
+                    {/* Party Size */}
+                    <div className="bg-white/5 p-4 rounded-2xl space-y-3">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className={labelClass}>👨 {t('adults')}</label>
+                                {isEditing ? (
+                                    <input type="number" min={1} max={10} value={numAdults} onChange={e => setNumAdults(parseInt(e.target.value) || 1)} className={inputClass} />
+                                ) : (
+                                    <p className={`${displayClass} text-sm`}>{booking.numAdults || 0} {t('adults')}</p>
+                                )}
+                            </div>
+                            <div>
+                                <label className={labelClass}>👶 {t('children')}</label>
+                                {isEditing ? (
+                                    <input type="number" min={0} max={10} value={numChildren} onChange={e => setNumChildren(parseInt(e.target.value) || 0)} className={inputClass} />
+                                ) : (
+                                    <p className="text-sm text-neutral-400">{booking.numChildren || 0} {t('children')}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {!isEditing && booking.guestAges && (() => {
+                            try {
+                                const ages = JSON.parse(booking.guestAges);
+                                if (ages && ages.length > 0) {
+                                    return (
+                                        <div>
+                                            <label className={`${labelClass} mb-2`}>{t('guestAges')}</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {ages.map((age: number, idx: number) => (
+                                                    <div key={idx} className="px-3 py-1 bg-neutral-800 rounded-lg text-xs font-bold text-neutral-300">
+                                                        {age} {t('years')}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                            } catch {
+                                return null;
+                            }
+                            return null;
+                        })()}
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                        <label className={`${labelClass} flex items-center gap-2`}>📝 {t('notes')}</label>
+                        {isEditing ? (
+                            <textarea
+                                value={notes}
+                                onChange={e => setNotes(e.target.value)}
+                                rows={3}
+                                className={`${inputClass} resize-none`}
+                                placeholder={t('notesPlaceholder')}
+                            />
+                        ) : booking.notes ? (
+                            <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl">
+                                <p className="text-sm text-white leading-relaxed">{booking.notes}</p>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-neutral-600 italic">{t('noNotes')}</p>
+                    </div>
 
                     {/* Price & Source */}
                     <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
