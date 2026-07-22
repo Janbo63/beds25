@@ -273,9 +273,6 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                     {/* Notes */}
                     <div>
                         <label className={`${labelClass} flex items-center gap-2`}>📝 {t('notes')}</label>
-                        <div style={{ border: '3px solid red', padding: '8px', marginBottom: '8px', backgroundColor: 'rgba(255,0,0,0.2)' }}>
-                            <p style={{ color: 'yellow', fontWeight: 'bold', fontSize: '14px' }}>DEBUG: Payment Status = [{booking.paymentStatus || 'NULL'}] | Booking Status = [{booking.status}]</p>
-                        </div>
                         {isEditing ? (
                             <textarea
                                 value={notes}
@@ -293,12 +290,9 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                         )}
                     </div>
 
-                    {/* Payment Details - DEBUG TEST */}
-                    <div style={{ border: '3px solid red', padding: '16px', margin: '8px 0', borderRadius: '12px', backgroundColor: 'rgba(255,0,0,0.1)' }}>
-                        <p style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>PAYMENT STATUS TEST - Status: {booking.status} | PaymentStatus: {booking.paymentStatus || 'none'}</p>
-                    </div>
+                    {/* Payment Details */}
                     {booking.status !== 'BLOCKED' && (
-                        <div className="bg-white/5 p-4 rounded-2xl space-y-4 border-2 border-red-500">
+                        <div className="bg-white/5 p-4 rounded-2xl space-y-4">
                             <div className="flex justify-between items-center">
                                 <h5 className="text-sm font-bold text-neutral-200 uppercase tracking-wider">Payment Details</h5>
                                 {isEditing ? (
