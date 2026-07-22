@@ -21,12 +21,13 @@ export const metadata: Metadata = {
   },
 };
 
+import Script from 'next/script';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { Providers } from '@/components/providers';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import LanguageSwitch from '@/components/LanguageSwitch';
-
+import VersionBadge from '@/components/VersionBadge';
 import { APP_VERSION } from "@/lib/version";
 
 export default async function RootLayout({
@@ -39,8 +40,12 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <head>
-        <script
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground transition-colors duration-300`}
+      >
+        <Script
+          id="version-cache-invalidator"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               try {
@@ -54,17 +59,11 @@ export default async function RootLayout({
             `,
           }}
         />
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground transition-colors duration-300`}
-      >
         <NextIntlClientProvider messages={messages}>
           <Providers>
             {children}
             <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 p-2 rounded-full bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md border border-neutral-300 dark:border-white/10 shadow-2xl transition-colors duration-300">
-              <span className="text-[10px] font-mono font-bold text-hotel-gold px-2.5 py-0.5 rounded-full bg-hotel-gold/10 border border-hotel-gold/30">
-                {APP_VERSION}
-              </span>
+              <VersionBadge />
               <LanguageSwitch />
               <div className="w-px h-4 bg-neutral-300 dark:bg-white/10"></div>
               <ThemeToggle />
