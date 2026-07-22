@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
+import { APP_VERSION } from '@/lib/version';
+
 interface BookingModalProps {
     booking: any;
     onClose: () => void;
@@ -112,8 +114,11 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                         <h3 className="text-2xl font-bold text-neutral-900 dark:text-white leading-tight">
                             {isEditing ? t('editBooking') : t('bookingDetails')}
                         </h3>
-                        <p className="text-xs text-neutral-500 uppercase tracking-widest mt-1">
-                            {t('ref')}: {booking.externalId || booking.id.slice(-8)}
+                        <p className="text-xs text-neutral-500 uppercase tracking-widest mt-1 flex items-center gap-2">
+                            <span>{t('ref')}: {booking.externalId || booking.id.slice(-8)}</span>
+                            <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-hotel-gold/10 border border-hotel-gold/30 text-hotel-gold rounded">
+                                {APP_VERSION}
+                            </span>
                         </p>
                     </div>
                     <div className="flex items-center gap-2">

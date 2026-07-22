@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import TapeChart from '@/components/dashboard/TapeChart';
 import NewBookingModal from '@/components/dashboard/NewBookingModal';
+import { APP_VERSION } from '@/lib/version';
 
 export default function DashboardPage() {
     const [mounted, setMounted] = useState(false);
@@ -30,8 +31,11 @@ export default function DashboardPage() {
         <div className="p-8 space-y-8 animate-in fade-in duration-700">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
-                    <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-neutral-800 to-neutral-500 dark:from-white dark:to-neutral-500 bg-clip-text text-transparent">
+                    <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-neutral-800 to-neutral-500 dark:from-white dark:to-neutral-500 bg-clip-text text-transparent inline-flex items-center gap-3">
                         Booking <span className="text-hotel-gold">Timeline</span>
+                        <span className="px-2.5 py-1 text-xs font-mono font-bold bg-hotel-gold/10 border border-hotel-gold/30 text-hotel-gold rounded-xl tracking-normal">
+                            {APP_VERSION}
+                        </span>
                     </h1>
                     <p className="text-neutral-400 dark:text-neutral-500 mt-2 font-medium">Real-time room occupancy and guest schedule.</p>
                 </div>
