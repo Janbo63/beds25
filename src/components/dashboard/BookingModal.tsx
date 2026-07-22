@@ -292,41 +292,53 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
 
                     {/* Payment Details */}
                     {booking.status !== 'BLOCKED' && (
-                        <div className="bg-white/5 p-4 rounded-2xl space-y-4">
+                        <div className="bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 p-4 rounded-2xl space-y-4">
                             <div className="flex justify-between items-center">
-                                <h5 className="text-sm font-bold text-neutral-200 uppercase tracking-wider">Payment Details</h5>
+                                <div>
+                                    <label className={labelClass}>💳 Payment Status</label>
+                                    <h5 className="text-sm font-bold text-neutral-900 dark:text-neutral-200 uppercase tracking-wider">
+                                        Payment Details
+                                    </h5>
+                                </div>
                                 {isEditing ? (
-                                    <select
-                                        value={paymentStatus}
-                                        onChange={(e) => setPaymentStatus(e.target.value)}
-                                        className="bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-white/10 rounded-lg px-2 py-1.5 text-neutral-900 dark:text-white text-xs font-bold uppercase focus:outline-none"
-                                    >
-                                        <option value="pending" className="bg-white dark:bg-neutral-900 text-neutral-400">Pending</option>
-                                        <option value="partial" className="bg-white dark:bg-neutral-900 text-amber-400">Partial</option>
-                                        <option value="paid" className="bg-white dark:bg-neutral-900 text-emerald-400">Paid</option>
-                                        <option value="failed" className="bg-white dark:bg-neutral-900 text-rose-400">Failed</option>
-                                        <option value="refunded" className="bg-white dark:bg-neutral-900 text-purple-400">Refunded</option>
-                                    </select>
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            value={paymentStatus}
+                                            onChange={(e) => setPaymentStatus(e.target.value)}
+                                            className="bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-white/20 rounded-xl px-3 py-2 text-neutral-900 dark:text-white text-xs font-bold uppercase focus:outline-none focus:ring-2 focus:ring-hotel-gold/50 cursor-pointer shadow-sm"
+                                        >
+                                            <option value="pending" className="bg-white dark:bg-neutral-900 text-neutral-400">⏳ Pending</option>
+                                            <option value="partial" className="bg-white dark:bg-neutral-900 text-amber-400">⚡ Partial</option>
+                                            <option value="paid" className="bg-white dark:bg-neutral-900 text-emerald-400">✅ Paid</option>
+                                            <option value="failed" className="bg-white dark:bg-neutral-900 text-rose-400">❌ Failed</option>
+                                            <option value="refunded" className="bg-white dark:bg-neutral-900 text-purple-400">↩️ Refunded</option>
+                                        </select>
+                                    </div>
                                 ) : (
-                                    <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-black uppercase ${
-                                        paymentStatus === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' :
-                                        paymentStatus === 'partial' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' :
-                                        paymentStatus === 'failed' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30' :
-                                        'bg-neutral-800 text-neutral-400 border border-neutral-700'
+                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider ${
+                                        paymentStatus === 'paid' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' :
+                                        paymentStatus === 'partial' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30' :
+                                        paymentStatus === 'failed' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30' :
+                                        paymentStatus === 'refunded' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/30' :
+                                        'bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-300 dark:border-neutral-700'
                                     }`}>
-                                        {paymentStatus || 'pending'}
+                                        {paymentStatus === 'paid' ? '✅ Paid' :
+                                         paymentStatus === 'partial' ? '⚡ Partial' :
+                                         paymentStatus === 'failed' ? '❌ Failed' :
+                                         paymentStatus === 'refunded' ? '↩️ Refunded' :
+                                         '⏳ Pending'}
                                     </span>
                                 )}
                             </div>
 
                             {(booking.depositAmount || booking.balanceAmount) ? (
-                                <div className="grid grid-cols-2 gap-4 text-sm border-t border-white/5 pt-3">
+                                <div className="grid grid-cols-2 gap-4 text-sm border-t border-neutral-200 dark:border-white/5 pt-3">
                                     {booking.depositAmount ? (
                                         <div>
                                             <label className={labelClass}>10% Deposit</label>
-                                            <p className="text-white font-bold">{booking.depositAmount.toFixed(2)} zł</p>
+                                            <p className="text-neutral-900 dark:text-white font-bold">{booking.depositAmount.toFixed(2)} zł</p>
                                             {booking.depositPaidAt && (
-                                                <p className="text-[10px] text-neutral-400">Paid: {format(new Date(booking.depositPaidAt), 'd MMM yyyy')}</p>
+                                                <p className="text-[10px] text-neutral-500 dark:text-neutral-400">Paid: {format(new Date(booking.depositPaidAt), 'd MMM yyyy')}</p>
                                             )}
                                             {booking.stripeDepositId && (
                                                 <p className="text-[10px] text-neutral-500 font-mono mt-1 break-all select-all">Stripe: {booking.stripeDepositId}</p>
@@ -337,13 +349,13 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                                     {booking.balanceAmount ? (
                                         <div>
                                             <label className={labelClass}>90% Balance</label>
-                                            <p className="text-white font-bold">{booking.balanceAmount.toFixed(2)} zł</p>
+                                            <p className="text-neutral-900 dark:text-white font-bold">{booking.balanceAmount.toFixed(2)} zł</p>
                                             {booking.balanceDueDate && (() => {
                                                 const dueDate = new Date(booking.balanceDueDate);
                                                 const isUnpaid = booking.paymentStatus !== 'paid';
                                                 const isPastDue = isUnpaid && dueDate < new Date();
                                                 return (
-                                                    <p className={`text-[10px] font-medium ${isPastDue ? 'text-rose-400 font-bold' : 'text-neutral-400'}`}>
+                                                    <p className={`text-[10px] font-medium ${isPastDue ? 'text-rose-500 dark:text-rose-400 font-bold' : 'text-neutral-500 dark:text-neutral-400'}`}>
                                                         Due: {format(dueDate, 'd MMM yyyy')} {isPastDue ? '(Past Due)' : ''}
                                                     </p>
                                                 );
@@ -357,12 +369,12 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                             ) : null}
 
                             {(booking.paymentMethod || booking.nipNumber) && (
-                                <div className="text-xs text-neutral-400 border-t border-white/5 pt-2 flex justify-between">
+                                <div className="text-xs text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-white/5 pt-2 flex justify-between">
                                     {booking.paymentMethod ? (
-                                        <span>Method: <strong className="text-neutral-300 font-bold uppercase">{booking.paymentMethod}</strong></span>
+                                        <span>Method: <strong className="text-neutral-700 dark:text-neutral-300 font-bold uppercase">{booking.paymentMethod}</strong></span>
                                     ) : <span />}
                                     {booking.nipNumber ? (
-                                        <span>NIP: <strong className="text-neutral-300 font-bold font-mono">{booking.nipNumber}</strong></span>
+                                        <span>NIP: <strong className="text-neutral-700 dark:text-neutral-300 font-bold font-mono">{booking.nipNumber}</strong></span>
                                     ) : null}
                                 </div>
                             )}
