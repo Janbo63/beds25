@@ -383,6 +383,7 @@ export default function BookingModal({ booking, onClose }: BookingModalProps) {
                             </div>
                         ) : (
                             <p className="text-sm text-neutral-600 italic">{t('noNotes')}</p>
+                        )}
                     </div>
 
                     {/* Price & Source */}
