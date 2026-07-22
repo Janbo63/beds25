@@ -29,8 +29,10 @@ jobs:
             # Ensure git safe.directory is set
             git config --global --add safe.directory /var/www/beds25 2>/dev/null || true
 
-            # Pull latest changes
+            # Pull latest changes cleanly
             echo "📥 Pulling latest code from GitHub..."
+            git reset --hard HEAD
+            git clean -fd
             git pull origin main
 
             # Install dependencies
