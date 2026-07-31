@@ -24,40 +24,36 @@ export async function GET(request: NextRequest) {
     //  - Has Stripe payment data (depositAmount, stripeDepositId, stripeCustomerId, etc.)
     //  - Has paymentMethod = 'card'
     //  - Has depositAmount > 0
+    // Find bookings that are clearly website-originated but have source=BEDS24
+    // Broadened criteria: any of these indicate a website booking that was overwritten
     const corrupted = await prisma.booking.findMany({
         where: {
             OR: [
+                // Has Stripe payment data but source is BEDS24
                 { source: 'BEDS24', stripeDepositId: { not: null } },
                 { source: 'BEDS24', stripeCustomerId: { not: null } },
                 { source: 'BEDS24', stripePaymentMethodId: { not: null } },
                 { source: 'BEDS24', stripePaymentIntentId: { not: null } },
                 { source: 'BEDS24', depositAmount: { not: null, gt: 0 } },
                 { source: 'BEDS24', paymentMethod: 'card' },
+                // Source is BEDS24 but status is a payment lifecycle status (set by website flow)
+                { source: 'BEDS24', status: 'DEPOSIT_PAID' },
+                { source: 'BEDS24', status: 'BALANCE_PENDING' },
+                { source: 'BEDS24', status: 'FULLY_PAID' },
+                // Notes overwritten by webhook
+                { notes: { contains: 'Updated via Webhook' }, status: 'DEPOSIT_PAID' },
+                { notes: { contains: 'Updated via Webhook' }, depositAmount: { not: null, gt: 0 } },
             ],
         },
         include: { room: { select: { name: true } } },
         orderBy: { checkIn: 'asc' },
     });
 
-    // Also find bookings with notes = "Updated via Webhook from BEDS24" that have deposit data
-    const notesCorrupted = await prisma.booking.findMany({
-        where: {
-            notes: { contains: 'Updated via Webhook' },
-            depositAmount: { not: null, gt: 0 },
-            source: { not: 'Website' },
-        },
-        include: { room: { select: { name: true } } },
-    });
-
-    // Merge and deduplicate
-    const allCorrupted = new Map<string, any>();
-    for (const b of [...corrupted, ...notesCorrupted]) {
-        allCorrupted.set(b.id, b);
-    }
+    // No need for second query, merge removed
 
     const results = [];
 
-    for (const b of allCorrupted.values()) {
+    for (const b of corrupted) {
         const issues: string[] = [];
         if (b.source === 'BEDS24') issues.push('source=BEDS24');
         if (b.notes?.includes('Updated via Webhook')) issues.push('notes_overwritten');
