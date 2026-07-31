@@ -127,8 +127,48 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
             ? { Stripe_Deposit_ID: booking.stripeDepositId || booking.stripePaymentIntentId }
             : {}),
         ...(booking.stripePaymentMethodId ? { Stripe_Payment_Method_ID: booking.stripePaymentMethodId } : {}),
+        ...(booking.stripeCustomerId ? { Stripe_Customer_ID: booking.stripeCustomerId } : {}),
         ...(booking.nipNumber ? { Nip_Number: booking.nipNumber } : {}),
     };
+
+    // Subform: Payments breakdown for financial reconciliation in Zoho CRM
+    const paymentsSubform: any[] = [];
+    if (booking.depositAmount && booking.depositAmount > 0) {
+        paymentsSubform.push({
+            Payment_Type: 'Deposit (10%)',
+            Amount: booking.depositAmount,
+            Payment_Date: booking.depositPaidAt ? new Date(booking.depositPaidAt).toISOString() : new Date(booking.checkIn).toISOString(),
+            Payment_Method: (booking.stripeDepositId || booking.stripePaymentIntentId) ? 'Stripe' : (booking.paymentMethod || 'Stripe'),
+            Status: 'Paid',
+            Transaction_ID: booking.stripeDepositId || booking.stripePaymentIntentId || null,
+        });
+    }
+
+    if (booking.balanceAmount && booking.balanceAmount > 0) {
+        const isBalancePaid = !!booking.balancePaidAt || booking.paymentStatus?.toLowerCase() === 'paid' || booking.paymentStatus?.toLowerCase() === 'fully paid';
+        paymentsSubform.push({
+            Payment_Type: 'Balance (90%)',
+            Amount: booking.balanceAmount,
+            Payment_Date: booking.balancePaidAt ? new Date(booking.balancePaidAt).toISOString() : null,
+            Payment_Method: booking.stripeBalanceId ? 'Stripe' : (booking.paymentMethod || 'Stripe'),
+            Status: isBalancePaid ? 'Paid' : (booking.paymentStatus?.toLowerCase() === 'failed' ? 'Failed' : 'Pending'),
+            Transaction_ID: booking.stripeBalanceId || null,
+        });
+    } else if (!booking.depositAmount && booking.totalPrice && booking.totalPrice > 0) {
+        const isPaid = booking.paymentStatus?.toLowerCase() === 'paid' || booking.paymentStatus?.toLowerCase() === 'fully paid' || booking.status === 'CONFIRMED' || booking.status === 'FULLY_PAID';
+        paymentsSubform.push({
+            Payment_Type: 'Full Payment',
+            Amount: booking.totalPrice,
+            Payment_Date: booking.depositPaidAt ? new Date(booking.depositPaidAt).toISOString() : new Date(booking.checkIn).toISOString(),
+            Payment_Method: booking.paymentMethod || (booking.source?.toLowerCase().includes('booking') ? 'Bank Card' : 'Stripe'),
+            Status: isPaid ? 'Paid' : 'Pending',
+            Transaction_ID: booking.stripeDepositId || booking.stripePaymentIntentId || null,
+        });
+    }
+
+    if (paymentsSubform.length > 0) {
+        record.Payments = paymentsSubform;
+    }
 
     if (contactId) {
         record.Guest = { id: contactId };
@@ -511,7 +551,7 @@ export const bookingService = {
                     if (searchResult.data && searchResult.data.length > 0) {
                         // Find a match based on Room and Contact/Name
                         const match = searchResult.data.find((b: any) => {
-                            const roomMatch = !roomZohoId || b.Room?.id === roomZohoId;
+                            const roomMatch = !room?.id || b.Room?.id === room.id;
                             const beds25Match = b.Beds25ID === localBooking.id;
                             const contactMatch = contactId && b.Guest?.id === contactId;
                             const nameMatch = b.Name && localBooking.guestName && b.Name.toLowerCase().includes(localBooking.guestName.toLowerCase());

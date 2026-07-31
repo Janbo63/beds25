@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { bookingService } from '@/lib/zoho-service';
 import { addDays } from 'date-fns';
-import { beds24ToBeds25 } from '@/lib/status-map';
+import { beds24ToBeds25, isPaymentLifecycleStatus } from '@/lib/status-map';
 import { fetchSingleBeds24Booking } from '@/lib/beds24';
 
 export const dynamic = 'force-dynamic';
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check existing booking (search by Beds24 ID or Booking.com Channel Order ID)
-        const existingBooking = await prisma.booking.findFirst({
+        let existingBooking = await prisma.booking.findFirst({
             where: {
                 OR: [
                     { externalId: bookId.toString() },
@@ -229,6 +229,30 @@ export async function POST(request: NextRequest) {
                 ]
             }
         });
+
+        // Race condition guard: If not found by externalId, check for a very recent
+        // booking on the same room+dates. This prevents duplicate creation when the
+        // Beds24 webhook fires back before the local externalId is written.
+        if (!existingBooking && checkIn && checkOut && room) {
+            const recentCutoff = new Date(Date.now() - 5 * 60 * 1000); // Last 5 minutes
+            existingBooking = await prisma.booking.findFirst({
+                where: {
+                    roomId: room.id,
+                    checkIn,
+                    checkOut,
+                    createdAt: { gte: recentCutoff },
+                    status: { notIn: ['CANCELLED'] },
+                },
+            });
+            if (existingBooking) {
+                console.log(`[Webhook] Race condition guard: found existing booking ${existingBooking.id} by room+dates match`);
+                // Link the externalId now that we have it from the webhook
+                await prisma.booking.update({
+                    where: { id: existingBooking.id },
+                    data: { externalId: bookId.toString() },
+                });
+            }
+        }
 
         // Clean guest data (handle unresolved template variables)
         let firstName = isUnresolved(guestFirstName) ? '' : (guestFirstName || '');
@@ -296,11 +320,25 @@ export async function POST(request: NextRequest) {
                 roomId: room.id,
                 checkIn,
                 checkOut,
-                status: mappedStatus,
                 externalId: bookId.toString(),
                 // Preserve original source for website/direct bookings echoing back from Beds24
                 ...(existingSourcePreserved ? {} : { source: cleanReferer || cleanApiSource || 'BEDS24' }),
             };
+
+            // Status protection: NEVER overwrite payment lifecycle statuses from Beds24.
+            // Beds24 only knows "confirmed" (1) or "cancelled" (0) — it would destroy
+            // DEPOSIT_PAID, BALANCE_PENDING, FULLY_PAID, PAYMENT_FAILED tracking.
+            if (existingSourcePreserved && isPaymentLifecycleStatus(existingBooking.status)) {
+                // Only honour cancellations from the channel
+                if (mappedStatus === 'CANCELLED') {
+                    websiteSafeUpdate.status = 'CANCELLED';
+                    console.log(`[Webhook] Cancellation received for payment-tracked booking ${existingBooking.id}`);
+                } else {
+                    console.log(`[Webhook] Preserving status ${existingBooking.status} — ignoring Beds24 status "${mappedStatus}"`);
+                }
+            } else {
+                websiteSafeUpdate.status = mappedStatus;
+            }
 
             if (existingSourcePreserved) {
                 // Website/Direct booking — only update safe fields

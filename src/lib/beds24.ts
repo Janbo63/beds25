@@ -1,6 +1,7 @@
 import prisma from './prisma';
 import { bookingService } from './zoho-service';
 import { format } from 'date-fns';
+import { isPaymentLifecycleStatus } from './status-map';
 
 const BEDS24_API_URL = 'https://beds24.com/api/v2';
 
@@ -310,7 +311,11 @@ export async function importBeds24Data(inviteCode: string, existingRefreshToken?
                     guestId: guestId || existingRecord?.guestId || null,
                     checkIn: new Date(b.arrival),
                     checkOut: new Date(b.departure),
-                    status: mapStatus(b.status),
+                    // Protect payment lifecycle statuses from being overwritten by Beds24
+                    // Beds24 only knows confirmed/cancelled — it would destroy DEPOSIT_PAID etc.
+                    status: (existingRecord && isPaymentLifecycleStatus(existingRecord.status) && mapStatus(b.status) === 'CONFIRMED')
+                        ? existingRecord.status
+                        : mapStatus(b.status),
                     ...(preserveSource ? {} : { source: newSource }),
                     totalPrice: parseFloat(b.price || '0'),
                     roomId: localRoom.id

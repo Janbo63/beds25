@@ -132,34 +132,31 @@ export async function POST(request: NextRequest) {
         const balanceDueDate = new Date(checkInDate);
         balanceDueDate.setDate(balanceDueDate.getDate() - 3);
 
-        // Create booking via Zoho CRM service (writes to Zoho first, then local DB)
-        const booking = await bookingService.create({
-            roomId,
-            roomNumber: room.number || room.name,
-            guestName,
-            guestEmail,
-            numAdults: adults,
-            numChildren: children,
-            guestAges: guestAges || null,
-            checkIn: checkInDate,
-            checkOut: checkOutDate,
-            totalPrice,
-            notes: notes || null,
-            status: depositAmount ? 'DEPOSIT_PAID' : 'CONFIRMED',
-            source: 'Website',
-            voucherCode: voucherCode || null,
-            discountAmount: discountAmount || null,
-            paymentMethod: 'card',
-            paymentTiming: 'pay_online_now',
-            paymentStatus: depositAmount ? 'partial' : 'paid',
-            currency: 'PLN',
-        });
-
-        // Update local booking with split-payment and reference fields
-        const updatedBooking = await prisma.booking.update({
-            where: { id: booking.id },
+        // ═══ LOCAL-FIRST: Write to local DB first to prevent orphans ═══
+        // Previously this called bookingService.create() which writes Zoho FIRST.
+        // If the subsequent local DB write failed, Zoho had an orphan record with
+        // real payment data but Beds25/Beds24 were blind to it. (Kamila Kozaczyk incident, 27 Jul 2026)
+        const localBooking = await prisma.booking.create({
             data: {
                 bookingRef,
+                roomId,
+                guestName,
+                guestEmail,
+                numAdults: adults,
+                numChildren: children,
+                guestAges: guestAges || null,
+                checkIn: checkInDate,
+                checkOut: checkOutDate,
+                totalPrice,
+                notes: notes || null,
+                status: depositAmount ? 'DEPOSIT_PAID' : 'CONFIRMED',
+                source: 'Website',
+                voucherCode: voucherCode || null,
+                discountAmount: discountAmount || null,
+                paymentMethod: 'card',
+                paymentTiming: 'pay_online_now',
+                paymentStatus: depositAmount ? 'partial' : 'paid',
+                currency: 'PLN',
                 depositAmount: depositAmount || null,
                 depositPaidAt: depositAmount ? new Date() : null,
                 balanceAmount: balanceAmount || null,
@@ -187,12 +184,48 @@ export async function POST(request: NextRequest) {
             });
         }
 
+        // ═══ SYNC: Push to Zoho and Beds24 (non-blocking) ═══
+        // If these fail, the local record is safe and will be retried on next sync
+
+        // Sync to Zoho CRM
+        try {
+            await bookingService.syncToZoho(localBooking, room);
+            console.log('[Public API] Zoho sync completed for', localBooking.id);
+        } catch (zohoErr) {
+            console.error('[Public API] Zoho sync failed (non-fatal, will retry on next sync):', zohoErr);
+        }
+
+        // Push to Beds24 for channel availability blocking
+        try {
+            const { createBeds24Booking } = await import('@/lib/beds24');
+            const beds24Id = await createBeds24Booking({
+                roomId,
+                checkIn: checkInDate,
+                checkOut: checkOutDate,
+                guestName,
+                guestEmail,
+                phone: guestPhone || '',
+                numAdults: adults,
+                numChildren: children,
+                totalPrice,
+            });
+            if (beds24Id) {
+                await prisma.booking.update({
+                    where: { id: localBooking.id },
+                    data: { externalId: beds24Id.toString() },
+                });
+                console.log('[Public API] Beds24 booking created:', beds24Id);
+            }
+        } catch (beds24Err) {
+            console.error('[Public API] Beds24 push failed (non-fatal):', beds24Err);
+        }
+
         return withCors(
             NextResponse.json({
                 success: true,
-                bookingId: booking.id,
+                bookingId: localBooking.id,
                 bookingRef,
-                status: booking.status,
+                status: localBooking.status,
                 checkIn,
                 checkOut,
                 nights,

@@ -39,6 +39,20 @@ export function beds24ToBeds25(status: string | number | undefined | null): Beds
 }
 
 /**
+ * Payment lifecycle statuses managed by the Beds25 payment system.
+ * These MUST NEVER be overwritten by Beds24 imports/webhooks/reconcile,
+ * because Beds24 only understands "confirmed" or "cancelled" and would
+ * destroy the payment tracking state.
+ *
+ * Used by: webhook handler, reconcile, beds24 sync.
+ */
+const PAYMENT_LIFECYCLE_STATUSES = ['DEPOSIT_PAID', 'BALANCE_PENDING', 'FULLY_PAID', 'PAYMENT_FAILED'];
+
+export function isPaymentLifecycleStatus(status: string | undefined | null): boolean {
+    return PAYMENT_LIFECYCLE_STATUSES.includes(status || '');
+}
+
+/**
  * Convert a Beds25 internal status → Zoho CRM dropdown value (title case).
  * Used by: mapBookingToZoho, sync fix handler.
  */
@@ -85,3 +99,27 @@ export function beds25ToBeds24(status: string | undefined | null): number {
     if (status === 'CANCELLED') return 0;
     return 1; // All other statuses = confirmed in Beds24
 }
+
+/**
+ * Check if a Beds25 status and a Zoho CRM status are operationally equivalent.
+ * Prevents false positive status mismatches when Zoho has "Fully Confirmed" or "Fully Paid" 
+ * while Beds25 has "CONFIRMED".
+ */
+export function areStatusesEquivalent(beds25Status: string | undefined | null, zohoStatus: string | undefined | null): boolean {
+    if (!zohoStatus) return true;
+    const b25 = (beds25Status || '').toUpperCase();
+    const zoho = (zohoStatus || '').toLowerCase();
+
+    // Active confirmed variations (Confirmed, Fully Confirmed, Fully Paid, Deposit Paid, Balance Pending)
+    const activeB25 = ['CONFIRMED', 'FULLY_PAID', 'DEPOSIT_PAID', 'BALANCE_PENDING'];
+    const activeZoho = ['confirmed', 'fully confirmed', 'fully paid', 'deposit paid', 'balance pending'];
+
+    if (activeB25.includes(b25) && activeZoho.includes(zoho)) {
+        return true; // Both systems agree this is an active confirmed reservation
+    }
+
+    if (b25 === 'CANCELLED' && zoho === 'cancelled') return true;
+
+    return beds25ToZoho(b25).toLowerCase() === zoho;
+}
+

@@ -93,7 +93,7 @@ async function reconcile(request: NextRequest, dryRun: boolean) {
         );
 
         // 5. Status mapping (uses shared status-map utility)
-        const mapStatus = (await import('@/lib/status-map')).beds24ToBeds25;
+        const { beds24ToBeds25: mapStatus, isPaymentLifecycleStatus } = await import('@/lib/status-map');
 
         // 6. Reconcile each Beds24 booking
         const results: ReconcileResult[] = [];
@@ -166,11 +166,16 @@ async function reconcile(request: NextRequest, dryRun: boolean) {
                     // Has changes — update
                     let didZohoSync = false;
                     if (!dryRun) {
+                        // Protect payment lifecycle statuses from being overwritten by Beds24
+                        const safeStatus = (isPaymentLifecycleStatus(existing.status) && mappedStatus === 'CONFIRMED')
+                            ? existing.status  // Keep DEPOSIT_PAID, BALANCE_PENDING, etc.
+                            : mappedStatus;
+
                         const updatedBooking = await prisma.booking.update({
                             where: { id: existing.id },
                             data: {
                                 guestName, guestEmail, checkIn, checkOut,
-                                status: mappedStatus, totalPrice, source,
+                                status: safeStatus, totalPrice, source,
                                 numAdults, numChildren, roomId: room.id,
                             },
                         });

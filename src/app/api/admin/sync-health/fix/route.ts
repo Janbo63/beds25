@@ -59,12 +59,35 @@ export async function POST(req: NextRequest) {
 
             // 3. Map Zoho record to local format
             const guestName = zohoRecord.Guest_Name || zohoRecord.Guest?.name || zohoRecord.Name?.split(' - ')[0] || 'Guest';
-            const guestEmail = zohoRecord.Guest?.Email || '';
             const checkIn = zohoRecord.Check_In ? new Date(zohoRecord.Check_In) : null;
             const checkOut = zohoRecord.Check_Out ? new Date(zohoRecord.Check_Out) : null;
 
+            // Fetch guest email from the linked Zoho Contact record
+            let guestEmail = '';
+            if (zohoRecord.Guest?.id) {
+                try {
+                    const contact = await zohoClient.getRecord('Contacts', zohoRecord.Guest.id);
+                    guestEmail = contact?.Email || '';
+                } catch {
+                    console.warn(`[SyncFix] Could not fetch contact ${zohoRecord.Guest.id} for email`);
+                }
+            }
+
             if (!checkIn || !checkOut) {
                 return NextResponse.json({ error: `Zoho record ${zohoId} has no valid dates` }, { status: 400 });
+            }
+
+            // Derive payment status from Zoho booking status
+            const zohoPaymentStatus = zohoRecord.Payment_status || zohoRecord.Payment_Status || null;
+            const depositAmount = zohoRecord.Deposit_Amount ? parseFloat(zohoRecord.Deposit_Amount) : null;
+            const balanceAmount = zohoRecord.Balance_Amount ? parseFloat(zohoRecord.Balance_Amount) : null;
+            const hasDeposit = depositAmount && depositAmount > 0;
+
+            // Calculate balance due date (3 days before check-in)
+            let balanceDueDate: Date | null = null;
+            if (checkIn && balanceAmount && balanceAmount > 0) {
+                balanceDueDate = new Date(checkIn);
+                balanceDueDate.setDate(balanceDueDate.getDate() - 3);
             }
 
             const bookingData = {
@@ -78,10 +101,19 @@ export async function POST(req: NextRequest) {
                 totalPrice: parseFloat(zohoRecord.Total_Price || '0'),
                 numAdults: parseInt(zohoRecord.Number_of_Adults || '2'),
                 numChildren: parseInt(zohoRecord.Number_of_Children || '0'),
+                guestAges: zohoRecord.Guest_Ages || null,
                 notes: zohoRecord.Booking_Notes || `Imported from Zoho orphan fix (${zohoId})`,
-                paymentMethod: zohoRecord.Payment_Method || null,
+                paymentMethod: zohoRecord.Payment_Method?.toLowerCase() === 'stripe' ? 'card' : (zohoRecord.Payment_Method || null),
                 paymentTiming: zohoRecord.Payment_Timing || null,
-                paymentStatus: zohoRecord.Payment_Status || null,
+                paymentStatus: hasDeposit ? 'partial' : (zohoPaymentStatus || null),
+                // Stripe payment fields — critical for deposit tracking and auto-balance-charge
+                depositAmount: depositAmount || null,
+                depositPaidAt: hasDeposit ? (zohoRecord.Created_Time ? new Date(zohoRecord.Created_Time) : new Date()) : null,
+                balanceAmount: balanceAmount || null,
+                balanceDueDate,
+                stripeDepositId: zohoRecord.Stripe_Deposit_ID || null,
+                stripeCustomerId: zohoRecord.Stripe_Customer_ID || null,
+                stripePaymentMethodId: zohoRecord.Stripe_Payment_Method_ID || null,
                 bookingComOrderId: zohoRecord.Bookingcom_order_ID || null,
                 bookingComPincode: zohoRecord.Bookingcom_Pincode || null,
                 voucherCode: zohoRecord.Voucher_code || null,
