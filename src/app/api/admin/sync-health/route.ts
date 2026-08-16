@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import zohoClient from '@/lib/zoho';
 import { fetchBeds24Bookings, getBeds24AccessToken } from '@/lib/beds24';
-import { beds24ToBeds25, beds25ToZoho } from '@/lib/status-map';
+import { beds24ToBeds25, beds25ToZoho, areStatusesEquivalent, isPaymentLifecycleStatus } from '@/lib/status-map';
 
 export const dynamic = 'force-dynamic';
 
@@ -113,7 +113,7 @@ export async function GET() {
                     if (zb.Check_In !== checkIn) {
                         issues.push({ beds25Id: booking.id, guest: booking.guestName, dates: dateRange, room: roomNum, issue: 'zoho_date_mismatch', detail: `Beds25: ${checkIn}, Zoho: ${zb.Check_In}` });
                     }
-                    if (zb.Booking_status && zb.Booking_status !== expectedZohoStatus) {
+                    if (zb.Booking_status && !areStatusesEquivalent(booking.status, zb.Booking_status)) {
                         issues.push({ beds25Id: booking.id, guest: booking.guestName, dates: dateRange, room: roomNum, issue: 'zoho_status_mismatch', detail: `Beds25: ${expectedZohoStatus}, Zoho: "${zb.Booking_status}"` });
                     }
                 } else if (zohoMap.size > 0) { // Only flag not found if Zoho actually fetched records
@@ -130,7 +130,7 @@ export async function GET() {
                     const b24Status = beds24ToBeds25(b24.status as string | number);
                     if (b24Status === 'CANCELLED' && booking.status !== 'CANCELLED') {
                         issues.push({ beds25Id: booking.id, guest: booking.guestName, dates: dateRange, room: roomNum, issue: 'beds24_status_mismatch', detail: `Cancelled in Beds24 but ${booking.status} in Beds25` });
-                    } else if (b24Status !== 'CANCELLED' && b24Status !== booking.status && booking.status !== 'BLOCKED') {
+                    } else if (b24Status !== 'CANCELLED' && b24Status !== booking.status && booking.status !== 'BLOCKED' && !isPaymentLifecycleStatus(booking.status)) {
                         issues.push({ beds25Id: booking.id, guest: booking.guestName, dates: dateRange, room: roomNum, issue: 'beds24_status_mismatch', detail: `Beds25: ${booking.status}, Beds24: ${b24Status}` });
                     }
                 } else if (beds24Map.size > 0) {

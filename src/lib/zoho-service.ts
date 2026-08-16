@@ -277,6 +277,45 @@ function mapZohoToRoom(zohoRecord: ZohoRecord): any {
 }
 
 /**
+ * Resolve a room's Zoho CRM ID from local room data.
+ * In production, Room.id is typically the 18-digit Zoho ID.
+ * But rooms created by Beds24 import use CUIDs, so we need to search.
+ */
+async function resolveRoomZohoId(room: any): Promise<string | undefined> {
+    if (!room) return undefined;
+    // If room.id is already a Zoho-format numeric ID, use it directly
+    if (/^\d{15,}$/.test(room.id)) return room.id;
+    // Search Zoho Rooms by Beds24 Room ID
+    if (room.externalId) {
+        try {
+            const result = await zohoClient.searchRecords(
+                `select id from Rooms where Beds24_Room_ID = '${room.externalId}'`
+            );
+            if (result.data && result.data.length > 0) {
+                return result.data[0].id;
+            }
+        } catch {
+            // Fall through
+        }
+    }
+    // Search by room name as last resort
+    if (room.name) {
+        try {
+            const result = await zohoClient.searchRecords(
+                `select id from Rooms where Room_Name = '${room.name.replace(/'/g, "\\'")}'`
+            );
+            if (result.data && result.data.length > 0) {
+                return result.data[0].id;
+            }
+        } catch {
+            // Fall through
+        }
+    }
+    console.warn(`[ZohoService] Could not resolve Zoho Room ID for room ${room.id} (${room.name})`);
+    return undefined;
+}
+
+/**
  * Booking Service - Zoho CRM backed
  */
 export const bookingService = {
@@ -289,8 +328,9 @@ export const bookingService = {
         const contactId = await findOrCreateContact(bookingData.guestName, bookingData.guestEmail);
         console.log('[ZohoService] Contact ID:', contactId);
 
-        // 2. Get the room's Zoho CRM ID (we use roomId which is already the Zoho ID)
-        const roomZohoId = bookingData.roomId;
+        // 2. Resolve the room's Zoho CRM ID
+        const localRoom = await prisma.room.findUnique({ where: { id: bookingData.roomId } });
+        const roomZohoId = await resolveRoomZohoId(localRoom || { id: bookingData.roomId });
 
         // 3. Create booking in Zoho CRM (Skip if in CI)
         let zohoRecord: any;
@@ -488,10 +528,11 @@ export const bookingService = {
         }
 
         // 2. Map booking to Zoho format
+        const roomZohoId = await resolveRoomZohoId(room);
         const zohoData = mapBookingToZoho({
             ...localBooking,
             roomNumber: room.number || room.name,
-        }, contactId, room.id);
+        }, contactId, roomZohoId);
 
         // 3. Upsert: update if zohoId exists, search by Beds24ID, or create new
         try {

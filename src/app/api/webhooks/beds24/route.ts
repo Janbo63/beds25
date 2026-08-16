@@ -382,9 +382,22 @@ export async function POST(request: NextRequest) {
                 console.log(`[Webhook] Skipping Zoho sync for website booking — data already correct in Zoho`);
             }
         } else {
-            // bookingService.create() handles: Zoho create + Beds24 push + local DB
-            // Do NOT call syncToZoho() again — that's Bug #1 (creates duplicate Zoho records)
-            await bookingService.create(bookingData);
+            // Create locally first, then sync to Zoho with full dedup logic.
+            // Do NOT use bookingService.create() — it has no dedup and always creates
+            // a new Zoho record, causing duplicates when webhooks race.
+            const { roomNumber, ...dbData } = bookingData;
+            const newBooking = await prisma.booking.create({
+                data: {
+                    ...dbData,
+                    status: mappedStatus,
+                },
+            });
+            // syncToZoho searches by Beds24ID, Beds25ID, dates before creating
+            try {
+                await bookingService.syncToZoho(newBooking, room);
+            } catch (zohoErr: any) {
+                console.warn('[Webhook] Zoho sync for new booking failed (non-fatal):', zohoErr?.message);
+            }
         }
 
         await logWebhook({

@@ -11,20 +11,22 @@ Beds25 is a **staff-facing booking management system** — not a customer-facing
 - Manage guest records synced bidirectionally with Zoho CRM
 - Handle voucher codes and multi-property support
 
-### Architecture
-- **Source of truth for room attributes**: Beds24 API v2 (room types, sizes, amenities, descriptions, pricing)
-- **Source of truth for bookings/guests**: Zoho CRM (custom Bookings, Rooms, Vouchers modules)
-- **Local cache**: SQLite via Prisma — for fast dashboard reads
-- **Sync strategy**: Beds24 → local DB → Zoho CRM → Public APIs. Writes go to Zoho first, then local DB.
-- **Authentication**: PIN-based login with JWT cookie sessions (30-day expiry, HttpOnly)
+### Architecture & The Booking Triad Contract
+> **Beds24 is the Master PMS (Headquarters)**. Unidirectional flow prevents duplicate "ghost" bookings.
+- **Source of truth for reservations, pricing, and calendar blocks**: Beds24 API v2.
+- **Availability Rule**: **No price explicitly set in Beds24 = Date is blocked/unavailable**. Never fallback to a default price.
+- **Beds25 Role**: Staff-facing management dashboard and Zoho CRM synchronization engine.
+- **Sync Direction**: Beds24 (Master) → Webhook (`/api/webhooks/beds24`) → Local SQLite Cache → Zoho CRM (Deals + Contacts).
+- **Website Bookings**: Customer checkout on the website injects directly into Beds24 (`/bookings`, source `WEBSITE`). Beds24 webhooks propagate the reservation into Beds25 and Zoho.
+- **Authentication**: PIN-based login with JWT cookie sessions (30-day expiry, HttpOnly) — *planned migration to Google OAuth NextAuth v5 per global standards*.
 
 ## Key Decisions
 
-- **Zoho CRM as source of truth** — chosen over a standalone DB because all booking data needs to flow into the broader CRM for marketing, automation, and reporting
-- **SQLite as cache, not primary** — Zoho API is too slow for dashboard UX, so we cache locally and sync
-- **Hybrid sync** — write-through to Zoho, periodic pull for reads. Manual sync endpoint as fallback
-- **Multi-property model** — Organization → Property → Room → Booking hierarchy, ready for multi-tenant
-- **Voucher system** — `VoucherCode` + `VoucherRedemption` models for promo codes with constraints
+- **Unidirectional Flow (Beds24 as Master)** — Prevents infinite sync loops and ghost booking duplicates. All official reservation modifications, cancellations, and blackout blocks flow from Beds24 down.
+- **Zoho CRM as Enterprise Record** — Synchronized via webhook ingestion to ensure all booking records empower marketing automations, guest history, and reporting.
+- **SQLite as Fast Local Cache** — Eliminates slow Zoho API latency during dashboard browsing and tape chart views.
+- **Multi-property model** — Organization → Property → Room → Booking hierarchy.
+- **Voucher system** — `VoucherCode` + `VoucherRedemption` models for promo codes with constraints.
 
 ## Tech Stack
 
