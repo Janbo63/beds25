@@ -217,8 +217,8 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-8 rounded-3xl w-full max-w-xl shadow-2xl relative">
-                <button onClick={onClose} className="absolute top-6 right-6 text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-white transition-colors">✕</button>
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-8 rounded-3xl w-full max-w-xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+                <button onClick={onClose} className="sticky top-0 float-right z-10 text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-white transition-colors">✕</button>
 
                 <h2 className="text-2xl font-bold mb-8 text-neutral-900 dark:text-white">{t('title')}</h2>
 
