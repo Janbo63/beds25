@@ -197,8 +197,8 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
         // DIRECT bookings — check if historic
         if (isHistoric) return 'bg-[#E8A0BF] text-white shadow-md border-b-2 border-black/20'; // Pink — historic
 
-        // Default: DIRECT non-private bookings
-        return 'bg-alpaca-green text-white shadow-md border-b-2 border-black/20';
+        // Default: DIRECT non-private bookings — grey
+        return 'bg-[#6B7280] text-white shadow-md border-b-2 border-black/20';
     };
 
     const getIcon = (b: any) => {
