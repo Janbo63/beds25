@@ -167,6 +167,8 @@
         "capacityInfo": "Capacity {max} guests",
         "minStayInfo": "Minimum stay: {min} night(s)",
         "guestName": "Guest Name",
+        "guestEmail": "Email",
+        "guestPhone": "Phone",
         "adults": "Adults",
         "children": "Children",
         "childrenAges": "Children's Ages",
@@ -189,7 +191,8 @@
         "errorMaxAdults": "This room allows a maximum of {max} adults",
         "errorCapacity": "This room has a maximum capacity of {max} guests",
         "errorMinNights": "Minimum stay is {min} night(s)",
-        "errorGeneric": "Failed to create booking. Please try again."
+        "errorGeneric": "Failed to create booking. Please try again.",
+        "privateBooking": "Private Booking (Friends/Family)"
     },
     "Rates": {
         "title": "Daily Occupancy",

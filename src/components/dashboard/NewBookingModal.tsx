@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { addDays, format } from 'date-fns';
 import { useTranslations } from 'next-intl';
+import GuestSearchInput from './GuestSearchInput';
 
 interface NewBookingModalProps {
     isOpen: boolean;
@@ -25,6 +26,9 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
         roomId: '',
         guestName: '',
         guestEmail: '',
+        guestPhone: '',
+        guestId: null as string | null,
+        isNewGuest: true,
         numAdults: 2,
         numChildren: 0,
         guestAges: [] as number[],
@@ -65,6 +69,9 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             checkOut: checkOutStr,
                             guestName: '',
                             guestEmail: '',
+                            guestPhone: '',
+                            guestId: null,
+                            isNewGuest: true,
                             numAdults: 2,
                             numChildren: 0,
                             guestAges: [],
@@ -80,6 +87,9 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             roomId: '',
                             guestName: '',
                             guestEmail: '',
+                            guestPhone: '',
+                            guestId: null,
+                            isNewGuest: true,
                             numAdults: 2,
                             numChildren: 0,
                             guestAges: [],
@@ -182,7 +192,8 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                     ...formData,
                     totalPrice: parseFloat(formData.totalPrice),
                     guestAges: JSON.stringify(formData.guestAges),
-                    source: 'DIRECT'
+                    source: 'DIRECT',
+                    guestId: formData.guestId
                 }),
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -262,13 +273,53 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
 
                     <div className="space-y-2">
                         <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('guestName')}</label>
-                        <input
+                        <GuestSearchInput
                             required
-                            type="text"
-                            className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
                             value={formData.guestName}
-                            onChange={e => setFormData({ ...formData, guestName: e.target.value })}
+                            onChange={(val) => setFormData({ ...formData, guestName: val })}
+                            onGuestSelect={(guest) => {
+                                setFormData(prev => ({
+                                    ...prev,
+                                    guestName: guest.name,
+                                    guestEmail: guest.email || '',
+                                    guestPhone: guest.phone || '',
+                                    guestId: guest.id,
+                                    isNewGuest: false,
+                                }));
+                            }}
+                            onNewGuest={() => {
+                                setFormData(prev => ({
+                                    ...prev,
+                                    guestId: null,
+                                    isNewGuest: true,
+                                }));
+                            }}
                         />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('guestEmail')}</label>
+                            <input
+                                type="email"
+                                className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
+                                value={formData.guestEmail}
+                                onChange={e => setFormData({ ...formData, guestEmail: e.target.value })}
+                                placeholder="email@example.com"
+                                readOnly={!formData.isNewGuest && !!formData.guestId}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('guestPhone')}</label>
+                            <input
+                                type="tel"
+                                className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
+                                value={formData.guestPhone}
+                                onChange={e => setFormData({ ...formData, guestPhone: e.target.value })}
+                                placeholder="+48 ..."
+                                readOnly={!formData.isNewGuest && !!formData.guestId}
+                            />
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

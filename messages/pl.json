@@ -166,6 +166,8 @@
         "capacityInfo": "Pojemność {max} gości",
         "minStayInfo": "Minimalny pobyt: {min} noc(y)",
         "guestName": "Imię i nazwisko gościa",
+        "guestEmail": "E-mail",
+        "guestPhone": "Telefon",
         "adults": "Dorośli",
         "children": "Dzieci",
         "childrenAges": "Wiek dzieci",

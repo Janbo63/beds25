@@ -81,13 +81,13 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const {
-            roomId, guestName, guestEmail,
+            roomId, guestName, guestEmail, guestPhone,
             numAdults, numChildren, guestAges,
             checkIn, checkOut, totalPrice,
-            notes, status, source, isPrivate
+            notes, status, source, isPrivate, guestId
         } = body;
 
-        console.log('[API] Creating booking:', { roomId, guestName, dates: { checkIn, checkOut } });
+        console.log('[API] Creating booking:', { roomId, guestName, guestId, dates: { checkIn, checkOut } });
 
         const adults = numAdults || 2;
         const children = numChildren || 0;
@@ -102,12 +102,34 @@ export async function POST(request: NextRequest) {
 
         const room = validation.room;
 
+        // If guestId provided, link to existing Guest; otherwise create new
+        let resolvedGuestId = guestId || null;
+        if (!resolvedGuestId && guestEmail) {
+            // Try to find existing guest by email to prevent duplicates
+            const { default: prisma } = await import('@/lib/prisma');
+            const existingGuest = await prisma.guest.findUnique({
+                where: { email: guestEmail },
+            });
+            if (existingGuest) {
+                resolvedGuestId = existingGuest.id;
+                // Update phone if provided and missing
+                if (guestPhone && !existingGuest.phone) {
+                    await prisma.guest.update({
+                        where: { id: existingGuest.id },
+                        data: { phone: guestPhone },
+                    });
+                }
+            }
+        }
+
         // Create booking via Zoho CRM service (writes to Zoho first, then local DB)
         const booking = await bookingService.create({
             roomId,
             roomNumber: room!.number,
             guestName,
             guestEmail,
+            guestPhone,
+            guestId: resolvedGuestId,
             numAdults: adults,
             numChildren: children,
             guestAges: guestAges || null,

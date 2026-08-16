@@ -361,20 +361,43 @@ export const bookingService = {
                 }
             } catch (error) {
                 console.error('[ZohoService] Failed to push to Beds24:', error);
-                // We choose NOT to fail the whole process, but log verification needed
-                // Alternatively, throw error if strict sync is required
             }
         }
 
-        // 4. Sync to local database
+        // 4. Create or link Guest record in local DB
+        let guestId = bookingData.guestId || null;
+        if (!guestId && bookingData.guestEmail) {
+            // Try to find by email
+            const existingGuest = await prisma.guest.findUnique({
+                where: { email: bookingData.guestEmail },
+            });
+            if (existingGuest) {
+                guestId = existingGuest.id;
+            } else {
+                // Create new Guest
+                const nameParts = (bookingData.guestName || '').trim().split(/\s+/);
+                const newGuest = await prisma.guest.create({
+                    data: {
+                        name: bookingData.guestName,
+                        email: bookingData.guestEmail || null,
+                        phone: bookingData.guestPhone || null,
+                        firstName: nameParts[0] || null,
+                        lastName: nameParts.slice(1).join(' ') || null,
+                    },
+                });
+                guestId = newGuest.id;
+                console.log('[ZohoService] Created new Guest:', guestId);
+            }
+        }
+
+        // 5. Sync to local database
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { roomNumber, ...bookingDataForDb } = bookingData;
+        const { roomNumber, guestPhone: _phone, isNewGuest: _new, ...bookingDataForDb } = bookingData;
 
         const localBooking = await prisma.booking.create({
             data: {
                 ...bookingDataForDb,
-                // Let Prisma auto-generate cuid for Beds25 internal ID
-                // Only store Zoho ID in zohoId field (Bug #2 fix)
+                guestId,
                 zohoId: zohoRecord.id,
                 status: bookingData.status || 'CONFIRMED',
             }
