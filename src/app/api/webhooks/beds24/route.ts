@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { bookingService } from '@/lib/zoho-service';
 import { addDays } from 'date-fns';
-import { beds24ToBeds25, isPaymentLifecycleStatus } from '@/lib/status-map';
+import { beds24ToBeds25, isPaymentLifecycleStatus, mapChannelSource } from '@/lib/status-map';
 import { fetchSingleBeds24Booking } from '@/lib/beds24';
 
 export const dynamic = 'force-dynamic';
@@ -298,13 +298,13 @@ export async function POST(request: NextRequest) {
             checkIn,
             checkOut,
             status: mappedStatus,
-            source: isOwnEchoBack ? 'Website' : (cleanReferer || cleanApiSource || 'BEDS24'),
+            source: isOwnEchoBack ? 'Website' : mapChannelSource(cleanApiSource, cleanReferer),
             totalPrice: parsePrice(price),
             numAdults: parseInt(numAdult || '1') || 1,
             numChildren: parseInt(numChild || '0') || 0,
             externalId: bookId.toString(),
             isPrivate,
-            notes: `Imported via Webhook from ${cleanReferer || 'Beds24'}`
+            notes: `Imported via Webhook from ${mapChannelSource(cleanApiSource, cleanReferer)}`
         };
 
         const event = existingBooking ? 'BOOKING_UPDATE' : 'BOOKING_CREATE';
@@ -322,7 +322,7 @@ export async function POST(request: NextRequest) {
                 checkOut,
                 externalId: bookId.toString(),
                 // Preserve original source for website/direct bookings echoing back from Beds24
-                ...(existingSourcePreserved ? {} : { source: cleanReferer || cleanApiSource || 'BEDS24' }),
+                ...(existingSourcePreserved ? {} : { source: mapChannelSource(cleanApiSource, cleanReferer) }),
             };
 
             // Status protection: NEVER overwrite payment lifecycle statuses from Beds24.

@@ -1,7 +1,7 @@
 import prisma from './prisma';
 import { bookingService } from './zoho-service';
 import { format } from 'date-fns';
-import { isPaymentLifecycleStatus } from './status-map';
+import { isPaymentLifecycleStatus, mapChannelSource } from './status-map';
 
 const BEDS24_API_URL = 'https://beds24.com/api/v2';
 
@@ -301,7 +301,7 @@ export async function importBeds24Data(inviteCode: string, existingRefreshToken?
             const PRESERVED_SOURCES = ['Website', 'alpaca-site', 'WEBSITE', 'Direct', 'DIRECT'];
             const existingRecord = await prisma.booking.findUnique({ where: { externalId: b.id?.toString() } });
             const preserveSource = existingRecord && PRESERVED_SOURCES.includes(existingRecord.source || '');
-            const newSource = b.apiSource === 'BEDS25_DIRECT' ? (existingRecord?.source || 'Website') : (b.apiSource || 'BEDS24');
+            const newSource = mapChannelSource(b.apiSource, b.referer);
 
             const localBooking = await prisma.booking.upsert({
                 where: { externalId: b.id?.toString() },

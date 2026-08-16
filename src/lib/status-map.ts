@@ -123,3 +123,51 @@ export function areStatusesEquivalent(beds25Status: string | undefined | null, z
     return beds25ToZoho(b25).toLowerCase() === zoho;
 }
 
+/**
+ * Map Beds24 apiSource / referer to a human-friendly channel name.
+ * Used by: webhook handler, Beds24 import.
+ *
+ * Beds24 apiSource values: https://wiki.beds24.com/index.php/API_V2.0_apisourceids
+ */
+const CHANNEL_MAP: Record<string, string> = {
+    // OTA Channels
+    'booking': 'Booking.com',
+    'booking.com': 'Booking.com',
+    'expedia': 'Expedia',
+    'agoda': 'Agoda',
+    'airbnb': 'Airbnb',
+    'hostelworld': 'Hostelworld',
+    'tripadvisor': 'TripAdvisor',
+    // Direct / Website
+    'bookingpage': 'Website',
+    'direct': 'Direct',
+    'BEDS25_DIRECT': 'Website',
+    // Legacy / Fallbacks
+    'beds24': 'Manual',
+    'BEDS24': 'Manual',
+};
+
+export function mapChannelSource(apiSource?: string | null, referer?: string | null): string {
+    // Try apiSource first (most reliable)
+    if (apiSource) {
+        const mapped = CHANNEL_MAP[apiSource] || CHANNEL_MAP[apiSource.toLowerCase()];
+        if (mapped) return mapped;
+        // If apiSource is a known OTA keyword, capitalise it
+        if (apiSource.toLowerCase().includes('booking')) return 'Booking.com';
+        if (apiSource.toLowerCase().includes('expedia')) return 'Expedia';
+        if (apiSource.toLowerCase().includes('airbnb')) return 'Airbnb';
+    }
+    // Try referer (may contain URL or channel name)
+    if (referer && referer !== 'BEDS24') {
+        const ref = referer.toLowerCase();
+        if (ref.includes('booking.com')) return 'Booking.com';
+        if (ref.includes('expedia')) return 'Expedia';
+        if (ref.includes('airbnb')) return 'Airbnb';
+        if (ref.includes('agoda')) return 'Agoda';
+        if (ref.includes('alpac') || ref.includes('zagroda')) return 'Website';
+        // Return the referer as-is if it looks like a meaningful value
+        if (referer.length > 2 && !referer.startsWith('[')) return referer;
+    }
+    // Fallback
+    return 'Manual';
+}

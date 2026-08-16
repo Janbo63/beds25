@@ -221,6 +221,130 @@ export async function GET(request: NextRequest) {
         results.push(kamilaResult);
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // 4. Fix source='BEDS24' on existing bookings
+    // ═══════════════════════════════════════════════════════════
+    const { mapChannelSource } = await import('@/lib/status-map');
+
+    const beds24SourceBookings = await prisma.booking.findMany({
+        where: {
+            source: { in: ['BEDS24', 'beds24', 'Beds24'] },
+            checkOut: { gte: new Date() },
+        },
+        include: { room: { select: { name: true } } },
+    });
+
+    // Try to resolve source from Beds24 API
+    let beds24Bookings: any[] = [];
+    try {
+        const property = await prisma.property.findFirst({ where: { beds24RefreshToken: { not: null } } });
+        if (property?.beds24RefreshToken) {
+            const { getBeds24AccessToken, fetchBeds24Bookings } = await import('@/lib/beds24');
+            const accessToken = await getBeds24AccessToken(property.beds24RefreshToken);
+            beds24Bookings = await fetchBeds24Bookings(accessToken);
+        }
+    } catch { /* non-fatal */ }
+
+    const beds24ById = new Map<string, any>();
+    for (const b of beds24Bookings) {
+        if (b.id) beds24ById.set(b.id.toString(), b);
+    }
+
+    for (const booking of beds24SourceBookings) {
+        const b24Data = booking.externalId ? beds24ById.get(booking.externalId) : null;
+        const resolvedSource = b24Data
+            ? mapChannelSource(b24Data.apiSource, b24Data.referer)
+            : mapChannelSource(null, null);
+
+        const sourceResult: any = {
+            id: booking.id,
+            guest: booking.guestName,
+            room: booking.room?.name,
+            currentSource: booking.source,
+            resolvedSource,
+            beds24ApiSource: b24Data?.apiSource || 'UNKNOWN',
+            beds24Referer: b24Data?.referer || 'UNKNOWN',
+        };
+
+        if (applyFix && resolvedSource !== booking.source) {
+            await prisma.booking.update({
+                where: { id: booking.id },
+                data: { source: resolvedSource },
+            });
+            sourceResult.action = 'SOURCE_FIXED';
+        } else {
+            sourceResult.action = 'AUDIT_ONLY';
+        }
+
+        results.push(sourceResult);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 5. Find DEPOSIT_PAID bookings with missing payment data
+    // ═══════════════════════════════════════════════════════════
+    const missingPaymentData = await prisma.booking.findMany({
+        where: {
+            status: { in: ['DEPOSIT_PAID', 'FULLY_PAID', 'BALANCE_PENDING'] },
+            depositAmount: null,
+            checkOut: { gte: new Date() },
+        },
+        include: { room: { select: { name: true } } },
+    });
+
+    for (const booking of missingPaymentData) {
+        const paymentResult: any = {
+            id: booking.id,
+            guest: booking.guestName,
+            room: booking.room?.name,
+            status: booking.status,
+            depositAmount: booking.depositAmount,
+            balanceAmount: booking.balanceAmount,
+            stripeDepositId: booking.stripeDepositId || 'NONE',
+            stripeCustomerId: booking.stripeCustomerId || 'NONE',
+            issue: 'MISSING_PAYMENT_DATA',
+        };
+
+        // Try to recover from Zoho
+        if (applyFix && booking.zohoId) {
+            try {
+                const zohoRecord = await zohoClient.getRecord('Bookings', booking.zohoId);
+                if (zohoRecord) {
+                    const deposit = parseFloat(zohoRecord.Deposit_Amount || '0');
+                    const balance = parseFloat(zohoRecord.Balance_Amount || '0');
+                    const stripeId = zohoRecord.Stripe_Deposit_ID || null;
+                    const customerId = zohoRecord.Stripe_Customer_ID || null;
+                    const paymentMethodId = zohoRecord.Stripe_Payment_Method_ID || null;
+
+                    if (deposit > 0 || stripeId) {
+                        await prisma.booking.update({
+                            where: { id: booking.id },
+                            data: {
+                                ...(deposit > 0 ? { depositAmount: deposit } : {}),
+                                ...(balance > 0 ? { balanceAmount: balance } : {}),
+                                ...(stripeId ? { stripeDepositId: stripeId } : {}),
+                                ...(customerId ? { stripeCustomerId: customerId } : {}),
+                                ...(paymentMethodId ? { stripePaymentMethodId: paymentMethodId } : {}),
+                                paymentMethod: 'card',
+                                paymentStatus: 'partial',
+                            },
+                        });
+                        paymentResult.action = 'PAYMENT_DATA_RECOVERED';
+                        paymentResult.recovered = { deposit, balance, stripeId };
+                    } else {
+                        paymentResult.action = 'NO_ZOHO_PAYMENT_DATA';
+                    }
+                }
+            } catch (err: any) {
+                paymentResult.action = 'ERROR';
+                paymentResult.error = err.message;
+            }
+        } else {
+            paymentResult.action = 'AUDIT_ONLY';
+        }
+
+        results.push(paymentResult);
+    }
+
     return NextResponse.json({
         message: applyFix ? 'Fixes applied' : 'Audit only — add &fix=true to apply',
         total: results.length,
