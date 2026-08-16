@@ -248,10 +248,16 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('basePrice')}</label>
-                            <div className="w-full bg-neutral-100 dark:bg-neutral-950/50 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 text-neutral-500 dark:text-neutral-400">
-                                {rooms.find(r => r.id === formData.roomId)?.basePrice || '0'} {t('perNight')}
-                            </div>
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('status')}</label>
+                            <select
+                                className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
+                                value={formData.status}
+                                onChange={e => setFormData({ ...formData, status: e.target.value })}
+                            >
+                                <option value="CONFIRMED">{t('statusConfirmed')}</option>
+                                <option value="REQUEST">{t('statusRequest')}</option>
+                                <option value="BLOCKED">{t('statusBlocked')}</option>
+                            </select>
                         </div>
                     </div>
 
@@ -299,8 +305,9 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('guestEmail')}</label>
+                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('guestEmail')} <span className="text-red-400">*</span></label>
                             <input
+                                required
                                 type="email"
                                 className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
                                 value={formData.guestEmail}
@@ -420,16 +427,6 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] uppercase text-neutral-500 font-bold">{t('status')}</label>
-                            <select
-                                className="w-full bg-neutral-100 dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 rounded-xl p-3 outline-none focus:border-hotel-gold text-neutral-900 dark:text-white"
-                                value={formData.status}
-                                onChange={e => setFormData({ ...formData, status: e.target.value })}
-                            >
-                                <option value="CONFIRMED">{t('statusConfirmed')}</option>
-                                <option value="REQUEST">{t('statusRequest')}</option>
-                                <option value="BLOCKED">{t('statusBlocked')}</option>
-                            </select>
                             <label className="flex items-center gap-2 mt-2 text-sm text-neutral-500 font-bold dark:text-neutral-400 cursor-pointer pt-2">
                                 <input type="checkbox" checked={formData.isPrivate} onChange={e => setFormData({ ...formData, isPrivate: e.target.checked })} className="rounded border-neutral-300 dark:border-neutral-800 dark:bg-neutral-950 w-4 h-4 accent-hotel-gold" />
                                 {t('privateBooking', { fallback: 'Private Booking' })}
