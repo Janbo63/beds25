@@ -172,6 +172,8 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
         return `${startLine} / ${endLine}`;
     };
 
+    const HISTORIC_CUTOFF = '2026-07-01';
+
     const getBookingColor = (b: any) => {
         if (b.status === 'CANCELLED') return 'bg-neutral-200 text-neutral-500 border border-neutral-300 opacity-80';
         if (b.isPrivate) return 'bg-neutral-900 text-white shadow-md border-b-2 border-black/20';
@@ -179,6 +181,23 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
         if (b.status === 'REQUEST') return 'bg-amber-500 text-white shadow-md border-b-2 border-black/20';
         if (b.source?.toUpperCase() === 'AIRBNB') return 'bg-[#FF5A5F] text-white shadow-md border-b-2 border-black/20';
         if (b.source?.toUpperCase()?.includes('BOOKING')) return 'bg-[#003580] text-white shadow-md border-b-2 border-black/20';
+
+        // Website bookings — color by payment status
+        const isWebsite = b.source === 'Website' || b.source === 'WEBSITE' || b.source === 'alpaca-site';
+        const checkInStr = typeof b.checkIn === 'string' ? b.checkIn.slice(0, 10) : '';
+        const isHistoric = checkInStr && checkInStr < HISTORIC_CUTOFF;
+
+        if (isWebsite) {
+            if (isHistoric) return 'bg-[#E8A0BF] text-white shadow-md border-b-2 border-black/20'; // Pink — historic
+            if (b.status === 'FULLY_PAID' || b.paymentStatus === 'Fully Paid') return 'bg-[#166534] text-white shadow-md border-b-2 border-black/20'; // Dark green
+            if (b.status === 'DEPOSIT_PAID' || b.stripeDepositId) return 'bg-[#4ADE80] text-white shadow-md border-b-2 border-black/20'; // Light green
+            return 'bg-[#DC2626] text-white shadow-md border-b-2 border-black/20'; // Red — no payment
+        }
+
+        // DIRECT bookings — check if historic
+        if (isHistoric) return 'bg-[#E8A0BF] text-white shadow-md border-b-2 border-black/20'; // Pink — historic
+
+        // Default: DIRECT non-private bookings
         return 'bg-alpaca-green text-white shadow-md border-b-2 border-black/20';
     };
 
@@ -188,6 +207,14 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
         if (b.status === 'BLOCKED') return iconMap.BLOCKED;
         if (b.source?.toUpperCase() === 'AIRBNB') return iconMap.AIRBNB;
         if (b.source?.toUpperCase()?.includes('BOOKING')) return iconMap.BOOKING;
+
+        const isWebsite = b.source === 'Website' || b.source === 'WEBSITE' || b.source === 'alpaca-site';
+        if (isWebsite) {
+            if (b.status === 'FULLY_PAID' || b.paymentStatus === 'Fully Paid') return '✅';
+            if (b.status === 'DEPOSIT_PAID' || b.stripeDepositId) return '💳';
+            return '⚠️';
+        }
+
         return iconMap.DIRECT;
     };
 

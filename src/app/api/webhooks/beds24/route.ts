@@ -385,10 +385,45 @@ export async function POST(request: NextRequest) {
             // Create locally first, then sync to Zoho with full dedup logic.
             // Do NOT use bookingService.create() — it has no dedup and always creates
             // a new Zoho record, causing duplicates when webhooks race.
+
+            // Find or create Guest record for consistent data
+            let guestId: string | null = null;
+            if (cleanEmail) {
+                const existingGuest = await prisma.guest.findFirst({
+                    where: { email: cleanEmail },
+                });
+                if (existingGuest) {
+                    guestId = existingGuest.id;
+                    // Update name if guest record has no first/last name
+                    if (!existingGuest.firstName && firstName) {
+                        await prisma.guest.update({
+                            where: { id: existingGuest.id },
+                            data: {
+                                name: guestName,
+                                firstName: firstName || null,
+                                lastName: lastName || null,
+                            },
+                        });
+                    }
+                } else {
+                    const newGuest = await prisma.guest.create({
+                        data: {
+                            name: guestName,
+                            email: cleanEmail,
+                            firstName: firstName || null,
+                            lastName: lastName || null,
+                        },
+                    });
+                    guestId = newGuest.id;
+                    console.log(`[Webhook] Created Guest record: ${guestId} for ${guestName}`);
+                }
+            }
+
             const { roomNumber, ...dbData } = bookingData;
             const newBooking = await prisma.booking.create({
                 data: {
                     ...dbData,
+                    guestId,
                     status: mappedStatus,
                 },
             });
