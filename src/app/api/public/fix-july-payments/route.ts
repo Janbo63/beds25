@@ -96,7 +96,8 @@ export async function GET(request: NextRequest) {
         };
 
         const updateData: Record<string, any> = {
-            status: correction.newStatus,
+            // Don't overwrite CANCELLED status — michnik was a no-show
+            status: booking.status === 'CANCELLED' ? 'CANCELLED' : correction.newStatus,
             source: 'Website',
             guestEmail: correction.guestEmail,
             depositAmount: correction.deposit.amount,
