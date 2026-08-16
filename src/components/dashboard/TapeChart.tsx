@@ -179,8 +179,10 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
         if (b.isPrivate) return 'bg-neutral-900 text-white shadow-md border-b-2 border-black/20';
         if (b.status === 'BLOCKED') return 'bg-neutral-200 text-neutral-500 border border-neutral-300 ring-2 ring-inset ring-neutral-300 pattern-diagonal-lines-sm opacity-60';
         if (b.status === 'REQUEST') return 'bg-amber-500 text-white shadow-md border-b-2 border-black/20';
-        if (b.source?.toUpperCase() === 'AIRBNB') return 'bg-[#FF5A5F] text-white shadow-md border-b-2 border-black/20';
-        if (b.source?.toUpperCase()?.includes('BOOKING')) return 'bg-[#003580] text-white shadow-md border-b-2 border-black/20';
+        const isBookingCom = b.source?.toUpperCase()?.includes('BOOKING') || b.guestEmail?.includes('@guest.booking.com');
+        const isAirbnb = b.source?.toUpperCase() === 'AIRBNB' || b.guestEmail?.includes('@guest.airbnb.com');
+        if (isAirbnb) return 'bg-[#FF5A5F] text-white shadow-md border-b-2 border-black/20';
+        if (isBookingCom) return 'bg-[#003580] text-white shadow-md border-b-2 border-black/20';
 
         // Website bookings — color by payment status
         const isWebsite = b.source === 'Website' || b.source === 'WEBSITE' || b.source === 'alpaca-site';
@@ -205,8 +207,8 @@ export default function TapeChart({ onCellClick }: TapeChartProps) {
         if (b.status === 'CANCELLED') return iconMap.CANCELLED;
         if (b.isPrivate) return iconMap.PRIVATE;
         if (b.status === 'BLOCKED') return iconMap.BLOCKED;
-        if (b.source?.toUpperCase() === 'AIRBNB') return iconMap.AIRBNB;
-        if (b.source?.toUpperCase()?.includes('BOOKING')) return iconMap.BOOKING;
+        if (b.source?.toUpperCase() === 'AIRBNB' || b.guestEmail?.includes('@guest.airbnb.com')) return iconMap.AIRBNB;
+        if (b.source?.toUpperCase()?.includes('BOOKING') || b.guestEmail?.includes('@guest.booking.com')) return iconMap.BOOKING;
 
         const isWebsite = b.source === 'Website' || b.source === 'WEBSITE' || b.source === 'alpaca-site';
         if (isWebsite) {
