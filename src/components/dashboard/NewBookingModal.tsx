@@ -243,7 +243,7 @@ export default function NewBookingModal({ isOpen, onClose, onSuccess, initialDat
                             >
                                 <option value="">{t('selectAccommodation')}</option>
                                 {rooms.map(room => (
-                                    <option key={room.id} value={room.id}>{room.number} ({room.name})</option>
+                                    <option key={room.id} value={room.id}>{room.internalName || `${room.number} (${room.name})`}</option>
                                 ))}
                             </select>
                         </div>

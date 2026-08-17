@@ -25,6 +25,9 @@ export async function GET(request: NextRequest) {
                         }
                     }
                 }
+            },
+            orderBy: {
+                sortOrder: 'asc'
             }
         });
 
@@ -32,7 +35,7 @@ export async function GET(request: NextRequest) {
 
         const data = rooms.map((room: any) => ({
             id: room.id,
-            name: `${room.number} (${room.name})`,
+            name: room.internalName || `${room.number} (${room.name})`,
             propertyName: room.property.name,
             basePrice: room.basePrice,
             externalId: room.externalId,

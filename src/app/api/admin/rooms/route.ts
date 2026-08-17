@@ -69,7 +69,8 @@ export async function GET() {
                 media: true,
                 channelSettings: true,
                 images: { orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }] },
-            }
+            },
+            orderBy: { sortOrder: 'asc' }
         });
 
         // Filter out rooms that don't look like Zoho IDs (only numeric)

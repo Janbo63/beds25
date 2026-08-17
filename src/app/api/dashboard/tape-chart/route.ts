@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
                 }
             },
             orderBy: {
-                number: 'asc'
+                sortOrder: 'asc'
             }
         });
 
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
             return {
                 id: room.id,
-                number: room.number || room.name,
+                number: room.internalName || room.number || room.name,
                 name: room.name,
                 internalName: room.internalName,
                 type: room.name,
