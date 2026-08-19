@@ -13,6 +13,7 @@ import prisma from './prisma';
 import { format } from 'date-fns';
 import { createBeds24Booking, cancelBeds24Booking, updateBeds24Booking } from './beds24';
 import { beds25ToZoho, zohoToBeds25 } from './status-map';
+import { logToStef } from './stef-logger';
 
 /**
  * Zoho Module Names - matching your CRM setup
@@ -84,6 +85,16 @@ async function findOrCreateContact(guestName: string, guestEmail: string): Promi
 }
 
 /**
+ * Format a Date or date string to Zoho CRM's expected DateTime format: YYYY-MM-DDTHH:mm:ss+00:00 (without milliseconds)
+ */
+function toZohoDateTime(date: Date | string | null | undefined): string | null {
+    if (!date) return null;
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+}
+
+/**
  * Map Prisma booking to Zoho CRM format.
  *
  * IMPORTANT: Fields that originate from the Zagroda website (Stripe, deposit,
@@ -137,7 +148,7 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         paymentsSubform.push({
             Payment_Type: 'Deposit (10%)',
             Amount: booking.depositAmount,
-            Payment_Date: booking.depositPaidAt ? new Date(booking.depositPaidAt).toISOString().slice(0, 10) : new Date(booking.checkIn).toISOString().slice(0, 10),
+            Payment_Date: toZohoDateTime(booking.depositPaidAt || booking.checkIn),
             Payment_Method: (booking.stripeDepositId || booking.stripePaymentIntentId) ? 'Stripe' : (booking.paymentMethod || 'Stripe'),
             Status: 'Paid',
             Transaction_ID: booking.stripeDepositId || booking.stripePaymentIntentId || null,
@@ -149,17 +160,17 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         paymentsSubform.push({
             Payment_Type: 'Balance (90%)',
             Amount: booking.balanceAmount,
-            Payment_Date: booking.balancePaidAt ? new Date(booking.balancePaidAt).toISOString().slice(0, 10) : null,
+            Payment_Date: toZohoDateTime(booking.balancePaidAt),
             Payment_Method: booking.stripeBalanceId ? 'Stripe' : (booking.paymentMethod || 'Stripe'),
             Status: isBalancePaid ? 'Paid' : (booking.paymentStatus?.toLowerCase() === 'failed' ? 'Failed' : 'Pending'),
             Transaction_ID: booking.stripeBalanceId || null,
         });
-    } else if (!booking.depositAmount && booking.totalPrice && booking.totalPrice > 0) {
+    } else if (!booking.depositAmount && booking.totalPrice && booking.totalPrice > 0 && (booking.stripeDepositId || booking.depositPaidAt || booking.paymentStatus === 'Paid' || booking.paymentStatus === 'Fully Paid')) {
         const isPaid = booking.paymentStatus?.toLowerCase() === 'paid' || booking.paymentStatus?.toLowerCase() === 'fully paid' || booking.status === 'CONFIRMED' || booking.status === 'FULLY_PAID';
         paymentsSubform.push({
             Payment_Type: 'Full Payment',
             Amount: booking.totalPrice,
-            Payment_Date: booking.depositPaidAt ? new Date(booking.depositPaidAt).toISOString().slice(0, 10) : new Date(booking.checkIn).toISOString().slice(0, 10),
+            Payment_Date: toZohoDateTime(booking.depositPaidAt || booking.checkIn),
             Payment_Method: booking.paymentMethod || (booking.source?.toLowerCase().includes('booking') ? 'Bank Card' : 'Stripe'),
             Status: isPaid ? 'Paid' : 'Pending',
             Transaction_ID: booking.stripeDepositId || booking.stripePaymentIntentId || null,
@@ -323,48 +334,7 @@ export const bookingService = {
      * Create a new booking in Zoho CRM, then sync to local DB
      */
     async create(bookingData: any) {
-        // 1. Find or create contact in Zoho CRM
-        console.log('[ZohoService] Finding/Creating contact for:', bookingData.guestEmail);
-        const contactId = await findOrCreateContact(bookingData.guestName, bookingData.guestEmail);
-        console.log('[ZohoService] Contact ID:', contactId);
-
-        // 2. Resolve the room's Zoho CRM ID
-        const localRoom = await prisma.room.findUnique({ where: { id: bookingData.roomId } });
-        const roomZohoId = await resolveRoomZohoId(localRoom || { id: bookingData.roomId });
-
-        // 3. Create booking in Zoho CRM (Skip if in CI)
-        let zohoRecord: any;
-        if (process.env.ZOHO_CLIENT_ID === 'dummy') {
-            console.log('Skipping Zoho Booking Create (CI Mode)');
-            zohoRecord = { id: `mock-booking-id-${Date.now()}` };
-        } else {
-            const zohoData = mapBookingToZoho(bookingData, contactId, roomZohoId);
-            console.log('[ZohoService] Creating Booking in Zoho with data:', JSON.stringify(zohoData, null, 2));
-            try {
-                zohoRecord = await zohoClient.createRecord(ZOHO_MODULES.BOOKINGS, zohoData);
-                console.log('[ZohoService] Zoho Booking created:', zohoRecord.id);
-            } catch (error) {
-                console.error('[ZohoService] Failed to create Zoho record:', error);
-                throw error;
-            }
-        }
-
-        // 3.5 Create in Beds24 if this is a direct/manual booking (no externalId yet)
-        if (!bookingData.externalId) {
-            console.log('[ZohoService] Pushing new booking to Beds24...');
-            try {
-                const beds24Id = await createBeds24Booking(bookingData);
-                if (beds24Id) {
-                    console.log(`[ZohoService] Beds24 Booking Created: ${beds24Id}`);
-                    bookingData.externalId = beds24Id.toString();
-                    bookingData.source = 'DIRECT'; // Ensure source is set
-                }
-            } catch (error) {
-                console.error('[ZohoService] Failed to push to Beds24:', error);
-            }
-        }
-
-        // 4. Create or link Guest record in local DB
+        // 1. Create or link Guest record in local DB
         let guestId = bookingData.guestId || null;
         if (!guestId && bookingData.guestEmail) {
             // Try to find by email
@@ -390,18 +360,47 @@ export const bookingService = {
             }
         }
 
-        // 5. Sync to local database
+        // 2. Create in Beds24 if this is a direct/manual booking (no externalId yet)
+        if (!bookingData.externalId) {
+            console.log('[ZohoService] Pushing new booking to Beds24...');
+            try {
+                const beds24Id = await createBeds24Booking(bookingData);
+                if (beds24Id) {
+                    console.log(`[ZohoService] Beds24 Booking Created: ${beds24Id}`);
+                    bookingData.externalId = beds24Id.toString();
+                    bookingData.source = 'DIRECT'; // Ensure source is set
+                }
+            } catch (error) {
+                console.error('[ZohoService] Failed to push to Beds24:', error);
+            }
+        }
+
+        // 3. Save to local database FIRST (source of truth)
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { roomNumber, guestPhone: _phone, isNewGuest: _new, ...bookingDataForDb } = bookingData;
 
-        const localBooking = await prisma.booking.create({
+        let localBooking = await prisma.booking.create({
             data: {
                 ...bookingDataForDb,
                 guestId,
-                zohoId: zohoRecord.id,
                 status: bookingData.status || 'CONFIRMED',
             }
         });
+
+        // 4. Sync to Zoho CRM (non-fatal, backgroundable)
+        try {
+            const localRoom = await prisma.room.findUnique({ where: { id: bookingData.roomId } });
+            await bookingService.syncToZoho(localBooking, localRoom || { id: bookingData.roomId });
+            const updated = await prisma.booking.findUnique({ where: { id: localBooking.id } });
+            if (updated) localBooking = updated;
+        } catch (zohoError: any) {
+            console.error('[ZohoService] Non-fatal Zoho sync failed during booking creation:', zohoError?.message);
+            await logToStef('error', `Zoho sync failed for booking ${localBooking.id}`, {
+                bookingId: localBooking.id,
+                guestName: localBooking.guestName,
+                error: zohoError?.message,
+            });
+        }
 
         return localBooking;
     },
@@ -650,8 +649,13 @@ export const bookingService = {
             }
 
             return { id: zohoRecordId };
-        } catch (error) {
+        } catch (error: any) {
             console.error(`[ZohoService] Failed to sync booking to Zoho:`, error);
+            await logToStef('error', `Failed to sync booking ${localBooking.id} (${localBooking.guestName}) to Zoho`, {
+                bookingId: localBooking.id,
+                guestName: localBooking.guestName,
+                error: error?.message,
+            });
             throw error;
         }
     }
