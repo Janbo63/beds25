@@ -137,9 +137,38 @@ export async function POST(req: NextRequest) {
                 if (existingByBeds24) {
                     // Link the zohoId and we're done
                     await prisma.booking.update({ where: { id: existingByBeds24.id }, data: { zohoId } });
+                    // Also update Zoho record with Beds25ID
+                    await zohoClient.updateRecord('Bookings', zohoId, { Beds25ID: existingByBeds24.id });
                     return NextResponse.json({ 
                         success: true, 
                         message: `Found existing booking by Beds24 ID ${bookingData.externalId}, linked zohoId ${zohoId}.` 
+                    });
+                }
+            }
+
+            // Fallback: Check for matching booking by Room + Dates to link instead of duplicating
+            if (checkIn && checkOut) {
+                const existingByDates = await prisma.booking.findFirst({
+                    where: {
+                        roomId: localRoom.id,
+                        checkIn,
+                        checkOut,
+                        status: { notIn: ['CANCELLED'] },
+                    }
+                });
+                if (existingByDates) {
+                    await prisma.booking.update({
+                        where: { id: existingByDates.id },
+                        data: { zohoId }
+                    });
+                    // Also update Zoho record with Beds25ID and Beds24ID
+                    await zohoClient.updateRecord('Bookings', zohoId, {
+                        Beds25ID: existingByDates.id,
+                        ...(existingByDates.externalId ? { Beds24ID: existingByDates.externalId } : {})
+                    });
+                    return NextResponse.json({
+                        success: true,
+                        message: `Linked Zoho record ${zohoId} to existing Beds25 booking ${existingByDates.id} (${existingByDates.guestName}) by matching room and dates.`
                     });
                 }
             }
