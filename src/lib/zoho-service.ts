@@ -137,7 +137,7 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         paymentsSubform.push({
             Payment_Type: 'Deposit (10%)',
             Amount: booking.depositAmount,
-            Payment_Date: booking.depositPaidAt ? new Date(booking.depositPaidAt).toISOString() : new Date(booking.checkIn).toISOString(),
+            Payment_Date: booking.depositPaidAt ? new Date(booking.depositPaidAt).toISOString().slice(0, 10) : new Date(booking.checkIn).toISOString().slice(0, 10),
             Payment_Method: (booking.stripeDepositId || booking.stripePaymentIntentId) ? 'Stripe' : (booking.paymentMethod || 'Stripe'),
             Status: 'Paid',
             Transaction_ID: booking.stripeDepositId || booking.stripePaymentIntentId || null,
@@ -149,7 +149,7 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         paymentsSubform.push({
             Payment_Type: 'Balance (90%)',
             Amount: booking.balanceAmount,
-            Payment_Date: booking.balancePaidAt ? new Date(booking.balancePaidAt).toISOString() : null,
+            Payment_Date: booking.balancePaidAt ? new Date(booking.balancePaidAt).toISOString().slice(0, 10) : null,
             Payment_Method: booking.stripeBalanceId ? 'Stripe' : (booking.paymentMethod || 'Stripe'),
             Status: isBalancePaid ? 'Paid' : (booking.paymentStatus?.toLowerCase() === 'failed' ? 'Failed' : 'Pending'),
             Transaction_ID: booking.stripeBalanceId || null,
@@ -159,7 +159,7 @@ function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string)
         paymentsSubform.push({
             Payment_Type: 'Full Payment',
             Amount: booking.totalPrice,
-            Payment_Date: booking.depositPaidAt ? new Date(booking.depositPaidAt).toISOString() : new Date(booking.checkIn).toISOString(),
+            Payment_Date: booking.depositPaidAt ? new Date(booking.depositPaidAt).toISOString().slice(0, 10) : new Date(booking.checkIn).toISOString().slice(0, 10),
             Payment_Method: booking.paymentMethod || (booking.source?.toLowerCase().includes('booking') ? 'Bank Card' : 'Stripe'),
             Status: isPaid ? 'Paid' : 'Pending',
             Transaction_ID: booking.stripeDepositId || booking.stripePaymentIntentId || null,
