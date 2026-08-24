@@ -406,42 +406,31 @@ export const bookingService = {
     },
 
     /**
-     * Update a booking in Zoho CRM, then sync to local DB
+     * Update a booking in local DB, Zoho CRM, and Beds24
      */
     async update(id: string, updates: any) {
-        // Fetch existing from local DB to merge for Zoho payload
+        // Fetch existing from local DB
         const existing = await prisma.booking.findUnique({
             where: { id },
             include: { room: { include: { property: true } } }
         });
         if (!existing) throw new Error('Booking not found');
-        const merged = { ...existing, ...updates };
 
-        // 1. Sync to Zoho CRM
-        // Zoho IDs are 18+ digit numeric strings; Beds24 IDs are shorter
-        const isZohoId = /^\d{15,}$/.test(id);
-        if (process.env.ZOHO_CLIENT_ID !== 'dummy') {
-            try {
-                const zohoData = mapBookingToZoho(merged);
-                if (isZohoId) {
-                    // Booking exists in Zoho — update it
-                    await zohoClient.updateRecord(ZOHO_MODULES.BOOKINGS, id, zohoData);
-                } else {
-                    // Beds24-imported booking — create in Zoho on first edit
-                    console.log(`[ZohoService] Booking ${id} not in Zoho, creating...`);
-                    const zohoRecord = await zohoClient.createRecord(ZOHO_MODULES.BOOKINGS, zohoData);
-                    console.log(`[ZohoService] Created Zoho record ${zohoRecord.id} for Beds24 booking ${id}`);
-                }
-            } catch (error) {
-                console.warn(`[ZohoService] Zoho sync failed for booking ${id}, continuing with local update:`, error);
-            }
-        }
-
-        // 2. Sync to local database
+        // 1. Sync to local database
         const localBooking = await prisma.booking.update({
             where: { id },
-            data: updates
+            data: updates,
+            include: { room: { include: { property: true } } }
         });
+
+        // 2. Sync to Zoho CRM via syncToZoho (handles deduplication, room resolution, and zohoId updates)
+        if (process.env.ZOHO_CLIENT_ID !== 'dummy') {
+            try {
+                await bookingService.syncToZoho(localBooking, localBooking.room);
+            } catch (error) {
+                console.warn(`[ZohoService] Zoho sync failed for booking ${id}, continuing:`, error);
+            }
+        }
 
         // 3. Sync to Beds24 (update channel availability)
         if (existing.externalId) {
@@ -465,10 +454,10 @@ export const bookingService = {
     },
 
     /**
-     * Delete a booking from Zoho CRM and local DB
+     * Delete a booking from Zoho CRM, Beds24, and local DB
      */
     async delete(id: string) {
-        // 0. Get booking to find externalId for Beds24 cancellation
+        // 0. Get booking to find externalId and zohoId
         const booking = await prisma.booking.findUnique({
             where: { id },
             include: { room: { include: { property: true } } }
@@ -483,13 +472,14 @@ export const bookingService = {
             }
         }
 
-        // 1. Delete from Zoho CRM (only if the ID is a valid Zoho record ID)
-        const isZohoId = /^\d{15,}$/.test(id);
-        if (isZohoId && process.env.ZOHO_CLIENT_ID !== 'dummy') {
+        // 1. Delete from Zoho CRM (use booking.zohoId if available, or id if it's already a numeric Zoho ID)
+        const zohoRecordId = booking?.zohoId || (/^\d{15,}$/.test(id) ? id : null);
+        if (zohoRecordId && process.env.ZOHO_CLIENT_ID !== 'dummy') {
             try {
-                await zohoClient.deleteRecord(ZOHO_MODULES.BOOKINGS, id);
+                await zohoClient.deleteRecord(ZOHO_MODULES.BOOKINGS, zohoRecordId);
+                console.log(`[ZohoService] Deleted Zoho record ${zohoRecordId}`);
             } catch (err) {
-                console.warn(`[ZohoService] Zoho delete failed for booking ${id}, continuing with local delete:`, err);
+                console.warn(`[ZohoService] Zoho delete failed for booking ${zohoRecordId}, continuing with local delete:`, err);
             }
         }
 
