@@ -53,6 +53,7 @@ model Property {
   organization              Organization? @relation(fields: [organizationId], references: [id])
   media                     Media[]
   rooms                     Room[]
+  activitySessions          ActivitySession[]
 }
 
 model Media {
@@ -198,6 +199,7 @@ model Booking {
   voucherCode           String? // Promo/voucher code used
   discountAmount        Float? // Actual discount applied
   propertyId            String? // Direct link to property
+  activityBookings      ActivityBooking[]
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
@@ -286,3 +288,46 @@ model WebhookLog {
   @@index([direction, status])
   @@index([externalId])
 }
+
+// ── Dorota's Alpaca Activity Booking System ──────────────────────────────
+model ActivitySession {
+  id              String            @id @default(cuid())
+  propertyId      String
+  property        Property          @relation(fields: [propertyId], references: [id])
+  date            DateTime          // Date of session (normalized to midnight)
+  time            String            // "11:00", "15:30", or custom e.g. "14:00"
+  activityType    String            @default("MEET") // MEET ("Spotkanie"), WALK ("Spacer"), WORKSHOP ("Warsztaty"), BIRTHDAY ("Urodzinki")
+  status          String            @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
+  maxCapacity     Int               @default(15) // Headcount limit
+  notes           String?
+  bookings        ActivityBooking[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([propertyId, date, time])
+  @@index([date])
+}
+
+model ActivityBooking {
+  id              String           @id @default(cuid())
+  sessionId       String
+  session         ActivitySession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  guestName       String           // e.g. "Kowalska Anna"
+  phone           String?          // Phone / WhatsApp
+  email           String?
+  numAdults       Int              @default(2)
+  numChildren     Int              @default(0)
+  isRoomGuest     Boolean          @default(false) // True if staying in rooms (free perk)
+  roomBookingId   String?          // Link to room Booking if applicable
+  roomBooking     Booking?         @relation(fields: [roomBookingId], references: [id])
+  totalPrice      Float            @default(0)
+  paymentStatus   String           @default("UNPAID") // PAID, UNPAID, FREE_PERK
+  paymentMethod   String?          // CASH, BLIK, CARD, INCLUDED
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([sessionId])
+  @@index([roomBookingId])
+}
+

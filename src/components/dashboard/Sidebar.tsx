@@ -10,6 +10,7 @@ import {
     DollarSign,
     Settings,
     Activity,
+    BookOpen,
     ChevronRight,
     ChevronLeft
 } from 'lucide-react';
@@ -48,6 +49,7 @@ export default function Sidebar() {
 
     const menuItems = [
         { icon: Calendar, label: t('tapeChart'), href: '/dashboard' },
+        { icon: BookOpen, label: t('activities'), href: '/dashboard/activities' },
         { icon: BarChart3, label: t('reports'), href: '/dashboard/reports' },
         { icon: DollarSign, label: t('rates'), href: '/dashboard/rates' },
         { icon: Activity, label: 'Sync Health', href: '/dashboard/sync-health' },
