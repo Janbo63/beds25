@@ -1,7 +1,15 @@
 # Beds25 — Booking System with Zoho CRM Integration
 
 > Internal admin tool for managing room bookings, pricing, availability, and channel sync.
-> Inherits global standards from `~/.gemini/GEMINI.md`.
+
+## Governance
+
+- **Priority Tier**: 🔴 Tier 1 — Revenue Infrastructure
+- **Autonomy Level**: 🟢 Full Auto — Execute and report, commit (no push)
+- **Owner**: Robin (Engineering), Kev (Operations)
+- **Shared contracts**: See `F:\Senior Management\contracts.md` (Booking Triad, Deployment, Error Logging, Zoho CRM)
+- **Full objectives & KPIs**: See `F:\Senior Management\objectives.md`
+- **Escalation protocol**: See `F:\Senior Management\guardrails.md`
 
 ## Project Context
 
@@ -11,19 +19,14 @@ Beds25 is a **staff-facing booking management system** — not a customer-facing
 - Manage guest records synced bidirectionally with Zoho CRM
 - Handle voucher codes and multi-property support
 
-### Architecture & The Booking Triad Contract
-> **Beds24 is the Master PMS (Headquarters)**. Unidirectional flow prevents duplicate "ghost" bookings.
-- **Source of truth for reservations, pricing, and calendar blocks**: Beds24 API v2.
-- **Availability Rule**: **No price explicitly set in Beds24 = Date is blocked/unavailable**. Never fallback to a default price.
-- **Beds25 Role**: Staff-facing management dashboard and Zoho CRM synchronization engine.
-- **Sync Direction**: Beds24 (Master) → Webhook (`/api/webhooks/beds24`) → Local SQLite Cache → Zoho CRM (Deals + Contacts).
-- **Website Bookings**: Customer checkout on the website injects directly into Beds24 (`/bookings`, source `WEBSITE`). Beds24 webhooks propagate the reservation into Beds25 and Zoho.
+### Architecture
+> Follows the **Booking Triad Contract** — see `F:\Senior Management\contracts.md` for full rules.
+> Beds24 is the Master PMS. Beds25 is the staff dashboard and Zoho sync engine.
+> Sync direction: Beds24 → Webhook → SQLite Cache → Zoho CRM.
 - **Authentication**: PIN-based login with JWT cookie sessions (30-day expiry, HttpOnly) — *planned migration to Google OAuth NextAuth v5 per global standards*.
 
 ## Key Decisions
 
-- **Unidirectional Flow (Beds24 as Master)** — Prevents infinite sync loops and ghost booking duplicates. All official reservation modifications, cancellations, and blackout blocks flow from Beds24 down.
-- **Zoho CRM as Enterprise Record** — Synchronized via webhook ingestion to ensure all booking records empower marketing automations, guest history, and reporting.
 - **SQLite as Fast Local Cache** — Eliminates slow Zoho API latency during dashboard browsing and tape chart views.
 - **Multi-property model** — Organization → Property → Room → Booking hierarchy.
 - **Voucher system** — `VoucherCode` + `VoucherRedemption` models for promo codes with constraints.
@@ -84,11 +87,8 @@ Beds25 is a **staff-facing booking management system** — not a customer-facing
 - CI uses `file:./ci.db` (ephemeral) — never the production `dev.db`
 
 ### Deployment (Hostinger VPS)
-- **PM2 processes are per-user** — root's PM2 list is invisible to the `beds25` user. The CI deploys as `beds25` but PM2 was started by `root`. Use `pm2 restart beds25` as root after deploy.
-- **git safe.directory** — when the repo dir is owned by a different user, git refuses to operate. Fix: `git config --global --add safe.directory /var/www/beds25` for both `root` and `beds25` users.
-- **File ownership** — if `root` runs `npm run build`, the `.next/` directory becomes root-owned. The `beds25` user cannot overwrite it during CI deploy. Fix: `chown -R beds25:beds25 /var/www/beds25`
-- **Port conflicts** — always use `fuser -k 3003/tcp` before starting a new process if the previous one didn't shut down cleanly. Zombie Node processes can hold ports.
-- **PM2 start command** — do NOT use `PORT=3003 pm2 start npm -- start`. The PORT env var isn't reliably passed through. Instead: `pm2 start node_modules/.bin/next --name "beds25" -- start -p 3003`
+> Full deployment guardrails: See `F:\Senior Management\contracts.md` — Deployment & Infrastructure Contract.
+> **Port**: 3003 | **PM2 process**: `beds25` | **User**: `beds25` (not root) | **Domain**: `admin.zagrodaalpakoterapii.com`
 
 ### i18n / next-intl
 - Next.js 16 deprecated `middleware.ts` in favor of `proxy` — avoid `createMiddleware` from `next-intl` as it blocks server startup in CI

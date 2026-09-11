@@ -11,7 +11,9 @@ export default auth((req) => {
   const isPublicRoute =
     pathname.startsWith("/api/public") ||
     pathname.startsWith("/api/webhooks") ||
-    pathname.startsWith("/api/cron");
+    pathname.startsWith("/api/cron") ||
+    pathname === "/activities" ||
+    pathname.startsWith("/api/activities");
 
   if (isAuthApi || isPublicRoute) return NextResponse.next();
 

@@ -98,6 +98,21 @@ export default function ActivityDiary() {
     }
   }
 
+  async function handleDeleteSession(id: string) {
+    if (!confirm('Na pewno?')) return;
+    try {
+      const res = await fetch(`/api/activities/sessions?id=${id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchSessions();
+      }
+    } catch (err) {
+      console.error('Error deleting session:', err);
+    }
+  }
+
   function handleOpenAddGuest(session: { id: string; time: string; activityType: string }, initial?: any) {
     setActiveSessionForAdd(session);
     setPrefilledGuestData(initial || null);
@@ -268,6 +283,14 @@ export default function ActivityDiary() {
                       className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-md transition-all active:scale-95 flex items-center gap-1.5"
                     >
                       <Plus size={18} /> Dodaj gościa
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteSession(session.id)}
+                      className="w-10 h-10 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-500 flex items-center justify-center transition-colors"
+                      title="Usuń całą sesję"
+                    >
+                      <Trash2 size={18} />
                     </button>
                   </div>
 
