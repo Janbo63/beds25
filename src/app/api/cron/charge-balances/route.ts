@@ -206,7 +206,7 @@ async function logToStef(results: Array<{ bookingRef: string | null; status: str
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-Key': process.env.STEF_LOG_KEY || 'fs-log-key-2026',
+                'X-API-Key': process.env.STEF_LOG_KEY || '',
             },
             body: JSON.stringify({
                 app: 'beds25',

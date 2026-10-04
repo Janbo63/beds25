@@ -1,5 +1,5 @@
 const STEF_LOG_URL = process.env.STEF_LOG_URL || 'https://stef.futuresolutionsai.com/api/logs';
-const STEF_LOG_KEY = process.env.STEF_LOG_KEY || 'fs-log-key-2026';
+const STEF_LOG_KEY = process.env.STEF_LOG_KEY || '';
 const APP_NAME = 'beds25';
 
 export async function logToStef(
