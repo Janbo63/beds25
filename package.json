@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "quality": "node scripts/quality-ratchet.mjs",
+    "quality:update": "node scripts/quality-ratchet.mjs --update"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",

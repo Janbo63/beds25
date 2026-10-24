@@ -6,8 +6,34 @@ on:
   workflow_dispatch:
 
 jobs:
+  quality:
+    name: ✅ Quality gate
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: file:./ci.db
+      ZOHO_CLIENT_ID: dummy
+      AUTH_SECRET: ci-only-not-a-secret
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Quality ratchet (TypeScript + ESLint errors must not increase)
+        run: npm run quality
+      - name: Prepare ephemeral CI database
+        run: npx prisma db push --accept-data-loss
+      - name: Build
+        run: npm run build
+
   deploy:
     name: 🚀 Deploy to VPS
+    needs: quality
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
@@ -75,6 +101,14 @@ jobs:
             else
               echo "⚠️  CRON_SECRET not found in .env — skipping cron setup"
             fi
+
+            # Post-deploy health check (fails the deploy if the app is not healthy)
+            echo "🩺 Checking health..."
+            for i in 1 2 3 4 5 6; do
+              if curl -fsS http://localhost:3003/api/health >/dev/null; then echo "✅ Health OK"; break; fi
+              if [ "$i" = "6" ]; then echo "❌ Health check failed after deploy"; exit 1; fi
+              sleep 5
+            done
 
             echo "✅ Deployment complete!"
             echo "🌐 Application running on port 3003"

@@ -18,9 +18,9 @@ Staff-facing booking admin (not customer-facing): tape-chart calendar, pricing a
 | Task | Command |
 |---|---|
 | Dev | `npm run dev` (dev port not yet registered — see PROGRESS open decisions) |
-| Lint / typecheck / test | `npm run lint` · *(no typecheck script yet)* · *(no test script yet; Playwright config in `playwright.config.ts`, tests in `tests/`)* |
+| Lint / typecheck / test | `npm run lint` · `npm run typecheck` · `npm run quality` (ratchet: TS + ESLint error counts must not rise; `npm run quality:update` after fixing) · *(no test script yet; Playwright in `tests/`)* |
 | Build | `npm run build` |
-| Deploy | Push to `main` triggers `.github/workflows/deploy.yml` (SSH deploy to Hostinger). Push only with Jan's approval. |
+| Deploy | Push to `main` → `.github/workflows/deploy.yml`: quality gate → SSH deploy → `/api/health` check. Push only with Jan's approval. |
 
 ## 4. Where to look
 

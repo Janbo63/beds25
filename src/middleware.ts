@@ -9,6 +9,7 @@ export default auth((req) => {
 
   // ── Public routes — no auth needed ──
   const isPublicRoute =
+    pathname === "/api/health" ||
     pathname.startsWith("/api/public") ||
     pathname.startsWith("/api/webhooks") ||
     pathname.startsWith("/api/cron") ||

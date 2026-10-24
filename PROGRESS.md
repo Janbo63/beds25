@@ -5,30 +5,29 @@ Updated 2026-10-24 by Claude Opus (Robin). **Rewrite this file; do not append.**
 ## Current state
 
 - In production on Hostinger (port 3003, `admin.zagrodaalpakoterapii.com`). I did not check it live this session.
-- Last code changes: 2026-10-04 Stef log key read from env only; 2026-09-11 Dorota's activity booking and diary (`/activities`, public).
-- Errors from the cron jobs (`charge-balances`, `retry-zoho-sync`) and `zoho-service.ts` are reported to Stef.
+- 2026-10-24 (committed, **not pushed**): removed 6 unauthenticated one-off `fix-*` routes; moved `payment-overview` and `stripe-reconcile` behind the admin login (`/api/admin/`); added `GET /api/health`; added a CI quality gate and a post-deploy health check.
+- Errors from the cron jobs and `zoho-service.ts` are reported to Stef.
 - Auth: the code imports `next-auth`, but the old notes described PIN + `jose`. Confirm which login staff actually use.
 
 ## Definition of Done gaps
 
-- CI (`deploy.yml`) deploys on push to `main` **without** running lint, typecheck or tests first.
-- No `typecheck` or `test` script in `package.json`. Playwright tests exist in `tests/` but are not wired in (previously "skipped in CI").
-- No `GET /api/health` endpoint, so Stef can only ping the page.
-- Dev port not registered (contract §7 forbids using 3003 for dev).
+- Existing debt, now ratcheted (`quality-baseline.json`): **95 TypeScript errors, 183 ESLint errors** in `src`. The gate fails if either count rises. `next.config.ts` still has `ignoreBuildErrors: true`.
+- No `test` script. Playwright tests exist in `tests/` but are not wired in.
+- Remaining `/api/public/*` routes (availability, booking, rooms, voucher, property images) are intentionally public for the website. They need a review for input validation and rate limiting.
+- Health endpoint not yet in Stef's `MONITORED_ENDPOINTS`. Dev port not registered.
 
 ## Active work
 
 | Item | Status | Note |
 |---|---|---|
-| Zoho room push: `mapRoomToZoho` needs the new fields | open (from old notes) | not re-checked |
-| Playwright tests for the current auth | open | blocked by the auth question above |
+| Push + first CI run of the quality gate | waiting for Jan | the gate is untested on GitHub's Linux runner; watch the first run |
+| Zoho room push: `mapRoomToZoho` needs new fields | open (from old notes) | not re-checked |
 
 ## Open decisions for Jan
 
-- Approve adding a CI quality gate (lint + typecheck + build) before the deploy step. This changes the production pipeline. Recommendation: yes.
-- Approve adding `/api/health` and registering it in Stef's `MONITORED_ENDPOINTS`. Recommendation: yes; low risk.
-- Choose a dev port in the 3000–3099 range (suggest 3013) to add to the registry.
+- Push the 3 commits (`3452733` security, plus the pilot and gate commits). Recommendation: yes, in working hours, then watch Actions.
+- If anyone used the old `/api/public/payment-overview` link, it now requires login at `/api/admin/payment-overview`.
 
 ## Next action
 
-1. Add `typecheck` script + `/api/health` route, and a CI gate job before deploy (after Jan approves the pipeline change).
+1. After the push: confirm the CI gate and health check pass, then add `https://admin.zagrodaalpakoterapii.com/api/health` to Stef's `MONITORED_ENDPOINTS`.
