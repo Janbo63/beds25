@@ -1,3 +1,17 @@
+---
+project: beds25
+goal: Flawless real-time calendar synchronization, zero overbookings, instant Zoho CRM customer record generation. (from Stef data — confirm)
+target: Stripe balance charges and multi-room tape chart remain 100% error-free. (from Stef data — confirm)
+target_by: 2026-10-31
+progress: unknown — no error-rate measurement yet
+health: green
+last_action: 2026-10-24 Security fix deployed (public data-fix routes removed), CI quality gate + /api/health live
+next_action: Add /api/health to Stef MONITORED_ENDPOINTS
+next_owner: Robin
+next_due: 2026-10-31
+waiting_on: none
+---
+
 # Beds25 — Progress hand-off
 
 Updated 2026-10-24 by Claude Opus (Robin). **Rewrite this file; do not append.** Keep it ≤ 40 lines.
