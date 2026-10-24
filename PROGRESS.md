@@ -20,12 +20,12 @@ Updated 2026-10-24 by Claude Opus (Robin). **Rewrite this file; do not append.**
 
 | Item | Status | Note |
 |---|---|---|
-| Rotate the Stef log key (an old value is in this public repo's history) | waiting for Jan | Step 1 of the secret rotation walkthrough |
+| Stef log key in this public repo's history | closed 2026-10-24 | tested live: the leaked key is retired (401 for read and write); no rotation needed |
 | Zoho room push: `mapRoomToZoho` needs new fields | open (from old notes) | not re-checked |
 
 ## Open decisions for Jan
 
-- Confirm the logged-in admin (tape chart, bookings) works after the 2026-10-24 deploy.
+- Confirmed by Jan 2026-10-24: logged-in admin (tape chart, bookings) works after the deploy.
 - If anyone used the old `/api/public/payment-overview` link, it now requires login at `/api/admin/payment-overview`.
 
 ## Next action
