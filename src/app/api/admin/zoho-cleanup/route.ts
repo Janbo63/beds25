@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import zohoClient from '@/lib/zoho';
+import { isExternalTenantZohoRecord } from '@/lib/zoho-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,12 +42,12 @@ export async function GET(req: Request) {
         while (hasMore && page <= 10) { // Safety cap at 10 pages
             try {
                 const response = await zohoClient.getRecords('Bookings', {
-                    fields: ['Booking_Name', 'Guest', 'Check_In', 'Check_Out', 'Room', 'Beds24ID', 'Beds25ID', 'Booking_status'],
+                    fields: ['Name', 'Property_ID', 'Booking_Notes', 'Booking_Name', 'Guest', 'Check_In', 'Check_Out', 'Room', 'Beds24ID', 'Beds25ID', 'Booking_status'],
                     page,
                     per_page: 200,
                 });
                 if (response.data && response.data.length > 0) {
-                    allZohoRecords.push(...response.data);
+                    allZohoRecords.push(...response.data.filter((r) => !isExternalTenantZohoRecord(r)));
                     page++;
                     hasMore = response.info?.more_records || false;
                 } else {

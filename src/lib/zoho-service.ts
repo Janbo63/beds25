@@ -27,6 +27,24 @@ export const ZOHO_MODULES = {
 };
 
 /**
+ * Multi-Tenant Guard: Returns true if a Zoho CRM record belongs to an external IzeraStay hotel
+ * (e.g. Property_ID = 'IZH' or Name prefixed with [IZH]) so Zagroda's Beds25 ignores it.
+ */
+export function isExternalTenantZohoRecord(record: Record<string, unknown> | null | undefined): boolean {
+    if (!record) return false;
+    if (record.Property_ID && record.Property_ID !== 'ZAT') return true;
+    const name = String(record.Name || record.Booking_Name || record.Property_Name || '');
+    const internalName = String(record.Internal_Name || '');
+    const notes = String(record.Booking_Notes || '');
+    return (
+        /^\[(?!ZAT\])[A-Z]{3,4}\]/.test(name) ||
+        name.startsWith('IZH-') ||
+        internalName.startsWith('IZH-') ||
+        notes.includes('[Tenant: IZH')
+    );
+}
+
+/**
  * Find or create a contact in Zoho CRM
  */
 async function findOrCreateContact(guestName: string, guestEmail: string): Promise<string> {
@@ -105,6 +123,7 @@ function toZohoDateTime(date: Date | string | null | undefined): string | null {
 function mapBookingToZoho(booking: any, contactId?: string, roomZohoId?: string): ZohoRecord {
     const record: ZohoRecord = {
         Name: `${booking.guestName} - ${booking.roomNumber || 'Room'}`,
+        Property_ID: 'ZAT',
         Guest_Name: booking.guestName || 'Guest',
         Check_In: format(new Date(booking.checkIn), 'yyyy-MM-dd'),
         Check_Out: format(new Date(booking.checkOut), 'yyyy-MM-dd'),
@@ -497,10 +516,12 @@ export const bookingService = {
 
         const response = await zohoClient.getRecords(ZOHO_MODULES.BOOKINGS, {
             per_page: 200,
-            fields: ['id', 'Guest', 'Room', 'Check_In', 'Check_Out', 'Total_Price', 'Number_of_Adults', 'Number_of_Children', 'Guest_Ages', 'Booking_Notes', 'Payment_Method', 'Payment_Timing', 'Status', 'Bookingcom_order_ID', 'Voucher_code']
+            fields: ['id', 'Name', 'Property_ID', 'Guest', 'Room', 'Check_In', 'Check_Out', 'Total_Price', 'Number_of_Adults', 'Number_of_Children', 'Guest_Ages', 'Booking_Notes', 'Payment_Method', 'Payment_Timing', 'Status', 'Bookingcom_order_ID', 'Voucher_code']
         });
 
-        for (const zohoRecord of response.data) {
+        const zagrodaRecords = (response.data || []).filter((r) => !isExternalTenantZohoRecord(r));
+
+        for (const zohoRecord of zagrodaRecords) {
             const bookingData = mapZohoToBooking(zohoRecord);
 
             await prisma.booking.upsert({
@@ -604,6 +625,7 @@ export const bookingService = {
                     if (searchResult.data && searchResult.data.length > 0) {
                         // Find a match based on Room and Contact/Name
                         const match = searchResult.data.find((b: any) => {
+                            if (isExternalTenantZohoRecord(b)) return false;
                             const roomMatch = !room?.id || b.Room?.id === room.id;
                             const beds25Match = b.Beds25ID === localBooking.id;
                             const contactMatch = contactId && b.Guest?.id === contactId;
@@ -683,7 +705,8 @@ export const roomService = {
             propertyId = newProp.id;
         }
 
-        for (const zohoRoom of response.data) {
+        const zagrodaRooms = (response.data || []).filter((r) => !isExternalTenantZohoRecord(r));
+        for (const zohoRoom of zagrodaRooms) {
             const roomData = mapZohoToRoom(zohoRoom);
             await prisma.room.upsert({
                 where: { id: zohoRoom.id },

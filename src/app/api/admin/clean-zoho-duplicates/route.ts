@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import zohoClient from '@/lib/zoho';
-import { ZOHO_MODULES } from '@/lib/zoho-service';
+import { ZOHO_MODULES, isExternalTenantZohoRecord } from '@/lib/zoho-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,13 +28,13 @@ async function cleanDuplicates(dryRun: boolean) {
 
         while (hasMore) {
             const response = await zohoClient.getRecords(ZOHO_MODULES.BOOKINGS, {
-                fields: ['id', 'Name', 'Guest', 'Check_In', 'Check_Out', 'Room', 'Beds24ID', 'Beds25ID', 'Total_Price', 'Booking_status'],
+                fields: ['id', 'Name', 'Property_ID', 'Booking_Notes', 'Guest', 'Check_In', 'Check_Out', 'Room', 'Beds24ID', 'Beds25ID', 'Total_Price', 'Booking_status'],
                 page,
                 per_page: 200,
             });
 
             if (response.data && response.data.length > 0) {
-                allBookings.push(...response.data);
+                allBookings.push(...response.data.filter((r) => !isExternalTenantZohoRecord(r)));
                 hasMore = response.info?.more_records || false;
                 page++;
             } else {

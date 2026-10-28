@@ -55,6 +55,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400, headers: corsHeaders(request) });
     }
 
+    // Enforce room occupancy limits: at least 1 adult and at most 3 guests total per room
+    if (!Number.isFinite(adults) || adults < 1 || adults + children.length > 3) {
+        return NextResponse.json(
+            { error: 'Invalid guest count: must be at least 1 adult and at most 3 guests total per room' },
+            { status: 400, headers: corsHeaders(request) }
+        );
+    }
+
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
 

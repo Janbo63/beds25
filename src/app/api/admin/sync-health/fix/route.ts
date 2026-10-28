@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { bookingService } from '@/lib/zoho-service';
+import { bookingService, isExternalTenantZohoRecord } from '@/lib/zoho-service';
 import { createBeds24Booking, fetchSingleBeds24Booking } from '@/lib/beds24';
 import zohoClient from '@/lib/zoho';
 import { zohoToBeds25 } from '@/lib/status-map';
@@ -32,6 +32,9 @@ export async function POST(req: NextRequest) {
             const zohoRecord = await zohoClient.getRecord('Bookings', zohoId);
             if (!zohoRecord) {
                 return NextResponse.json({ error: `Zoho record ${zohoId} not found` }, { status: 404 });
+            }
+            if (isExternalTenantZohoRecord(zohoRecord)) {
+                return NextResponse.json({ error: `Refused: Zoho record ${zohoId} belongs to an external IzeraStay hotel tenant, not Zagroda Alpakoterapii.` }, { status: 400 });
             }
 
             // 2. Find the local room by Zoho Room ID

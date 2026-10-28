@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import zohoClient from '@/lib/zoho';
+import { isExternalTenantZohoRecord } from '@/lib/zoho-service';
 import { fetchBeds24Bookings, getBeds24AccessToken } from '@/lib/beds24';
 import { beds24ToBeds25, beds25ToZoho, areStatusesEquivalent, isPaymentLifecycleStatus } from '@/lib/status-map';
 
@@ -42,10 +43,12 @@ export async function GET() {
         // 3. Fetch Zoho CRM via COQL
         const zohoMap: Map<string, any> = new Map();
         try {
-            const coql = `select id, Check_In, Check_Out, Booking_status, Beds24ID, Beds25ID, Room from Bookings where Check_Out >= '${today.toISOString().slice(0, 10)}'`;
+            const coql = `select id, Name, Property_ID, Booking_Notes, Check_In, Check_Out, Booking_status, Beds24ID, Beds25ID, Room from Bookings where Check_Out >= '${today.toISOString().slice(0, 10)}'`;
             const zohoRes = await zohoClient.searchRecords(coql);
             if (zohoRes?.data) {
-                for (const zb of zohoRes.data) if (zb.id) zohoMap.set(zb.id, zb);
+                for (const zb of zohoRes.data) {
+                    if (zb.id && !isExternalTenantZohoRecord(zb)) zohoMap.set(zb.id, zb);
+                }
             }
         } catch (err) {
             console.warn('[SyncHealth] COQL Failed, falling back to full getRecords', err);
@@ -53,7 +56,9 @@ export async function GET() {
             try {
                 const zohoRes = await zohoClient.getRecords('Bookings');
                 if (zohoRes?.data) {
-                    for (const zb of zohoRes.data) if (zb.id) zohoMap.set(zb.id, zb);
+                    for (const zb of zohoRes.data) {
+                        if (zb.id && !isExternalTenantZohoRecord(zb)) zohoMap.set(zb.id, zb);
+                    }
                 }
             } catch(e) {
                 console.warn('[SyncHealth] getRecords Failed', e);
